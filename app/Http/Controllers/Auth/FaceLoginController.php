@@ -14,7 +14,9 @@ class FaceLoginController extends Controller
 {
     public function showForm()
     {
-        return inertia('Auth/FaceLogin');
+        return inertia('Auth/FaceLogin', [
+            'autoFaceLogin' => true
+        ]);
     }
 
     public function authenticate(Request $request)

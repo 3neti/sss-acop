@@ -2,27 +2,25 @@
 import { useForm } from '@inertiajs/vue3';
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 
+const props = defineProps({
+    autoFaceLogin: {
+        type: Boolean,
+        default: false,
+    },
+});
+
 const webcamRef = ref(null);
 const base64img = ref('');
 const hasCaptured = ref(false);
 const stream = ref(null);
 const timeoutId = ref(null);
 const showRetry = ref(false);
+const retrying = ref(false);
 
 const form = useForm({
     email: '',
     base64img: '',
 });
-
-// const capture = () => {
-//     const canvas = document.createElement('canvas');
-//     canvas.width = webcamRef.value.videoWidth;
-//     canvas.height = webcamRef.value.videoHeight;
-//     canvas.getContext('2d').drawImage(webcamRef.value, 0, 0);
-//     base64img.value = canvas.toDataURL('image/jpeg');
-//     form.base64img = base64img.value;
-//     hasCaptured.value = true;
-// };
 
 const capture = () => {
     const canvas = document.createElement('canvas');
@@ -32,7 +30,22 @@ const capture = () => {
     base64img.value = canvas.toDataURL('image/jpeg');
     form.base64img = base64img.value;
     hasCaptured.value = true;
+    retrying.value = false; // ✅ hide transition states
     stopCamera(); // 👈 Immediately stop after capture
+
+    if (props.autoFaceLogin) {
+        // Automatically login after capture
+        submit();
+    }
+};
+
+const stopCamera = () => {
+    if (stream.value) {
+        stream.value.getTracks().forEach((track) => track.stop());
+    }
+    if (timeoutId.value) {
+        clearTimeout(timeoutId.value);
+    }
 };
 
 const submit = () => {
@@ -48,15 +61,6 @@ const submit = () => {
             // allow re-capture if login fails
         },
     });
-};
-
-const stopCamera = () => {
-    if (stream.value) {
-        stream.value.getTracks().forEach((track) => track.stop());
-    }
-    if (timeoutId.value) {
-        clearTimeout(timeoutId.value);
-    }
 };
 
 onMounted(async () => {
@@ -91,6 +95,7 @@ onBeforeUnmount(() => {
 });
 
 const retake = async () => {
+    retrying.value = true;
     hasCaptured.value = false;
     base64img.value = '';
     form.base64img = '';
@@ -111,6 +116,11 @@ const retake = async () => {
         console.error('Error restarting camera:', error);
     }
     document.getElementById('email')?.focus();
+
+    // Auto-capture after short delay (let camera warm up)
+    setTimeout(() => {
+        capture(); // 👈 capture will call submit() again if autoFaceLogin is true
+    }, 1000); // adjust delay if needed
 };
 </script>
 
@@ -133,45 +143,6 @@ const retake = async () => {
                         />
                     </div>
 
-<!--                    &lt;!&ndash; Webcam Preview + Capture Button &ndash;&gt;-->
-<!--                    <div>-->
-<!--                        <video-->
-<!--                            ref="webcamRef"-->
-<!--                            autoplay-->
-<!--                            playsinline-->
-<!--                            muted-->
-<!--                            class="rounded-md border w-full max-w-full aspect-video object-cover"-->
-<!--                            width="100%"-->
-<!--                            height="auto"-->
-<!--                        />-->
-<!--                        <button-->
-<!--                            type="button"-->
-<!--                            @click="capture"-->
-<!--                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
-<!--                        >-->
-<!--                            📸 Capture Selfie-->
-<!--                        </button>-->
-<!--                    </div>-->
-
-<!--                    &lt;!&ndash; Captured Image Preview &ndash;&gt;-->
-<!--                    <div v-if="hasCaptured" class="flex flex-col items-center space-y-3">-->
-<!--                        <img-->
-<!--                            :src="base64img"-->
-<!--                            alt="Captured selfie"-->
-<!--                            class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"-->
-<!--                        />-->
-
-<!--                        &lt;!&ndash; Retry Button if login fails &ndash;&gt;-->
-<!--                        <button-->
-<!--                            v-if="showRetry"-->
-<!--                            type="button"-->
-<!--                            @click="retake"-->
-<!--                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
-<!--                        >-->
-<!--                            Retake Selfie-->
-<!--                        </button>-->
-<!--                    </div>-->
-
                     <!-- Camera or Captured Image -->
                     <div class="relative w-full aspect-video rounded-md border overflow-hidden">
                         <video
@@ -191,31 +162,10 @@ const retake = async () => {
                         />
                     </div>
 
-<!--                    &lt;!&ndash; Capture or Retry Buttons &ndash;&gt;-->
-<!--                    <div class="mt-3 flex justify-between gap-2">-->
-<!--                        <button-->
-<!--                            v-if="!hasCaptured"-->
-<!--                            type="button"-->
-<!--                            @click="capture"-->
-<!--                            class="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
-<!--                        >-->
-<!--                            📸 Capture Selfie-->
-<!--                        </button>-->
-
-<!--                        <button-->
-<!--                            v-if="hasCaptured && showRetry"-->
-<!--                            type="button"-->
-<!--                            @click="retake"-->
-<!--                            class="w-full px-4 py-2 text-sm font-medium text-indigo-700 border border-indigo-300 rounded-md hover:bg-indigo-50"-->
-<!--                        >-->
-<!--                            🔁 Retake Selfie-->
-<!--                        </button>-->
-<!--                    </div>-->
-
                     <!-- Capture or Retry Buttons -->
                     <div class="mt-3 flex justify-between gap-2">
                         <button
-                            v-if="!hasCaptured"
+                            v-if="!hasCaptured && !retrying"
                             type="button"
                             @click="capture"
                             class="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
@@ -224,7 +174,7 @@ const retake = async () => {
                         </button>
 
                         <button
-                            v-if="hasCaptured && showRetry"
+                            v-if="hasCaptured && showRetry && !retrying"
                             type="button"
                             @click="retake"
                             class="w-full px-4 py-2 text-sm font-medium text-indigo-700 border border-indigo-300 rounded-md hover:bg-indigo-50"
@@ -239,15 +189,8 @@ const retake = async () => {
                     </div>
 
                     <!-- Submit Button -->
-<!--                    <button-->
-<!--                        v-if="hasCaptured"-->
-<!--                        type="submit"-->
-<!--                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
-<!--                    >-->
-<!--                        Log In with Face-->
-<!--                    </button>-->
                     <button
-                        v-if="hasCaptured"
+                        v-if="hasCaptured && !autoFaceLogin && !retrying"
                         type="submit"
                         class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md shadow-sm"
                     >
