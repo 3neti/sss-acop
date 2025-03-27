@@ -14,6 +14,16 @@ const form = useForm({
     base64img: '',
 });
 
+// const capture = () => {
+//     const canvas = document.createElement('canvas');
+//     canvas.width = webcamRef.value.videoWidth;
+//     canvas.height = webcamRef.value.videoHeight;
+//     canvas.getContext('2d').drawImage(webcamRef.value, 0, 0);
+//     base64img.value = canvas.toDataURL('image/jpeg');
+//     form.base64img = base64img.value;
+//     hasCaptured.value = true;
+// };
+
 const capture = () => {
     const canvas = document.createElement('canvas');
     canvas.width = webcamRef.value.videoWidth;
@@ -22,6 +32,7 @@ const capture = () => {
     base64img.value = canvas.toDataURL('image/jpeg');
     form.base64img = base64img.value;
     hasCaptured.value = true;
+    stopCamera(); // 👈 Immediately stop after capture
 };
 
 const submit = () => {
@@ -122,50 +133,103 @@ const retake = async () => {
                         />
                     </div>
 
-                    <!-- Webcam Preview + Capture Button -->
-                    <div>
+<!--                    &lt;!&ndash; Webcam Preview + Capture Button &ndash;&gt;-->
+<!--                    <div>-->
+<!--                        <video-->
+<!--                            ref="webcamRef"-->
+<!--                            autoplay-->
+<!--                            playsinline-->
+<!--                            muted-->
+<!--                            class="rounded-md border w-full max-w-full aspect-video object-cover"-->
+<!--                            width="100%"-->
+<!--                            height="auto"-->
+<!--                        />-->
+<!--                        <button-->
+<!--                            type="button"-->
+<!--                            @click="capture"-->
+<!--                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
+<!--                        >-->
+<!--                            📸 Capture Selfie-->
+<!--                        </button>-->
+<!--                    </div>-->
+
+<!--                    &lt;!&ndash; Captured Image Preview &ndash;&gt;-->
+<!--                    <div v-if="hasCaptured" class="flex flex-col items-center space-y-3">-->
+<!--                        <img-->
+<!--                            :src="base64img"-->
+<!--                            alt="Captured selfie"-->
+<!--                            class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"-->
+<!--                        />-->
+
+<!--                        &lt;!&ndash; Retry Button if login fails &ndash;&gt;-->
+<!--                        <button-->
+<!--                            v-if="showRetry"-->
+<!--                            type="button"-->
+<!--                            @click="retake"-->
+<!--                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
+<!--                        >-->
+<!--                            Retake Selfie-->
+<!--                        </button>-->
+<!--                    </div>-->
+
+                    <!-- Camera or Captured Image -->
+                    <div class="relative w-full aspect-video rounded-md border overflow-hidden">
                         <video
+                            v-if="!hasCaptured"
                             ref="webcamRef"
                             autoplay
                             playsinline
                             muted
-                            class="rounded-md border w-full max-w-full aspect-video object-cover"
-                            width="100%"
-                            height="auto"
+                            class="w-full h-full object-cover"
+                        ></video>
+
+                        <img
+                            v-else
+                            :src="base64img"
+                            alt="Captured selfie"
+                            class="w-full h-full object-cover"
                         />
+                    </div>
+
+<!--                    &lt;!&ndash; Capture or Retry Buttons &ndash;&gt;-->
+<!--                    <div class="mt-3 flex justify-between gap-2">-->
+<!--                        <button-->
+<!--                            v-if="!hasCaptured"-->
+<!--                            type="button"-->
+<!--                            @click="capture"-->
+<!--                            class="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
+<!--                        >-->
+<!--                            📸 Capture Selfie-->
+<!--                        </button>-->
+
+<!--                        <button-->
+<!--                            v-if="hasCaptured && showRetry"-->
+<!--                            type="button"-->
+<!--                            @click="retake"-->
+<!--                            class="w-full px-4 py-2 text-sm font-medium text-indigo-700 border border-indigo-300 rounded-md hover:bg-indigo-50"-->
+<!--                        >-->
+<!--                            🔁 Retake Selfie-->
+<!--                        </button>-->
+<!--                    </div>-->
+
+                    <!-- Capture or Retry Buttons -->
+                    <div class="mt-3 flex justify-between gap-2">
                         <button
+                            v-if="!hasCaptured"
                             type="button"
                             @click="capture"
-                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
+                            class="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
                         >
                             📸 Capture Selfie
                         </button>
-                    </div>
 
-                    <!-- Captured Image Preview -->
-                    <div v-if="hasCaptured" class="flex justify-center">
-                        <img
-                            :src="base64img"
-                            alt="Captured selfie"
-                            class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
-                        />
-                    </div>
-
-                    <div v-if="hasCaptured" class="flex flex-col items-center space-y-3">
-                        <img
-                            :src="base64img"
-                            alt="Captured selfie"
-                            class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
-                        />
-
-                        <!-- Retry Button if login fails -->
                         <button
-                            v-if="showRetry"
+                            v-if="hasCaptured && showRetry"
                             type="button"
                             @click="retake"
-                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
+                            class="w-full px-4 py-2 text-sm font-medium text-indigo-700 border border-indigo-300 rounded-md hover:bg-indigo-50"
                         >
-                            Retake Selfie
+                            🔁 Retake Selfie
                         </button>
                     </div>
 
@@ -175,12 +239,19 @@ const retake = async () => {
                     </div>
 
                     <!-- Submit Button -->
+<!--                    <button-->
+<!--                        v-if="hasCaptured"-->
+<!--                        type="submit"-->
+<!--                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"-->
+<!--                    >-->
+<!--                        Log In with Face-->
+<!--                    </button>-->
                     <button
                         v-if="hasCaptured"
                         type="submit"
-                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md shadow-sm"
                     >
-                        Log In with Face
+                        ✅ Log In with Face
                     </button>
                 </form>
             </div>

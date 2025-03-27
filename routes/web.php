@@ -26,7 +26,6 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/test-image', [\App\Http\Controllers\TestController::class, 'showBase64Page'])->name('test.image');
-Route::get('/face-login', [FaceLoginController::class, 'showForm'])->name('face.login');
-Route::post('/face-login', [FaceLoginController::class, 'authenticate'])->name('face.login.attempt');
+
 
 require __DIR__.'/auth.php';
