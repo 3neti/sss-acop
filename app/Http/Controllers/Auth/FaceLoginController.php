@@ -15,7 +15,7 @@ class FaceLoginController extends Controller
     public function showForm()
     {
         return inertia('Auth/FaceLogin', [
-            'autoFaceLogin' => true
+            'autoFaceLogin' => config('sss-acop.auto_face_login')
         ]);
     }
 
