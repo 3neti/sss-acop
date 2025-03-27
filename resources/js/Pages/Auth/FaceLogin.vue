@@ -55,7 +55,12 @@ onMounted(async () => {
     }
 
     try {
-        stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
+        // stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.value = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'user' // 👈 front camera
+            }
+        });
         if (webcamRef.value) {
             webcamRef.value.srcObject = stream.value;
         }
@@ -82,7 +87,12 @@ const retake = async () => {
 
     // Restart camera
     try {
-        stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
+        // stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.value = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'user' // 👈 front camera
+            }
+        });
         if (webcamRef.value) {
             webcamRef.value.srcObject = stream.value;
         }
@@ -94,81 +104,86 @@ const retake = async () => {
 </script>
 
 <template>
-    <div class="min-h-screen flex items-center justify-center bg-gray-50">
-        <div class="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Login with Face</h2>
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
+        <div class="min-h-screen flex items-center justify-center bg-gray-50">
+            <div class="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Login with Face</h2>
 
-            <form @submit.prevent="submit" class="space-y-6">
-                <!-- Email Field -->
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                        id="email"
-                        type="email"
-                        v-model="form.email"
-                        required
-                        class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm"
-                    />
-                </div>
+                <form @submit.prevent="submit" class="space-y-6">
+                    <!-- Email Field -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                            id="email"
+                            type="email"
+                            v-model="form.email"
+                            required
+                            class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm"
+                        />
+                    </div>
 
-                <!-- Webcam Preview + Capture Button -->
-                <div>
-                    <video
-                        ref="webcamRef"
-                        autoplay
-                        playsinline
-                        class="rounded-md border w-full aspect-video object-cover"
-                    ></video>
+                    <!-- Webcam Preview + Capture Button -->
+                    <div>
+                        <video
+                            ref="webcamRef"
+                            autoplay
+                            playsinline
+                            muted
+                            class="rounded-md border w-full max-w-full aspect-video object-cover"
+                            width="100%"
+                            height="auto"
+                        />
+                        <button
+                            type="button"
+                            @click="capture"
+                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
+                        >
+                            📸 Capture Selfie
+                        </button>
+                    </div>
+
+                    <!-- Captured Image Preview -->
+                    <div v-if="hasCaptured" class="flex justify-center">
+                        <img
+                            :src="base64img"
+                            alt="Captured selfie"
+                            class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
+                        />
+                    </div>
+
+                    <div v-if="hasCaptured" class="flex flex-col items-center space-y-3">
+                        <img
+                            :src="base64img"
+                            alt="Captured selfie"
+                            class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
+                        />
+
+                        <!-- Retry Button if login fails -->
+                        <button
+                            v-if="showRetry"
+                            type="button"
+                            @click="retake"
+                            class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
+                        >
+                            Retake Selfie
+                        </button>
+                    </div>
+
+                    <!-- Error Messages -->
+                    <div v-if="form.errors.base64img || form.errors.email" class="text-sm text-red-600 text-center">
+                        {{ form.errors.base64img || form.errors.email }}
+                    </div>
+
+                    <!-- Submit Button -->
                     <button
-                        type="button"
-                        @click="capture"
-                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
+                        v-if="hasCaptured"
+                        type="submit"
+                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
                     >
-                        Capture Selfie
+                        Log In with Face
                     </button>
-                </div>
-
-                <!-- Captured Image Preview -->
-                <div v-if="hasCaptured" class="flex justify-center">
-                    <img
-                        :src="base64img"
-                        alt="Captured selfie"
-                        class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
-                    />
-                </div>
-
-                <div v-if="hasCaptured" class="flex flex-col items-center space-y-3">
-                    <img
-                        :src="base64img"
-                        alt="Captured selfie"
-                        class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
-                    />
-
-                    <!-- Retry Button if login fails -->
-                    <button
-                        v-if="showRetry"
-                        type="button"
-                        @click="retake"
-                        class="text-sm text-indigo-600 hover:underline"
-                    >
-                        Retake Selfie
-                    </button>
-                </div>
-
-                <!-- Error Messages -->
-                <div v-if="form.errors.base64img || form.errors.email" class="text-sm text-red-600 text-center">
-                    {{ form.errors.base64img || form.errors.email }}
-                </div>
-
-                <!-- Submit Button -->
-                <button
-                    v-if="hasCaptured"
-                    type="submit"
-                    class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md shadow-sm"
-                >
-                    Log In with Face
-                </button>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 </template>
