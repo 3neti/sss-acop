@@ -7,6 +7,7 @@ const base64img = ref('');
 const hasCaptured = ref(false);
 const stream = ref(null);
 const timeoutId = ref(null);
+const showRetry = ref(false);
 
 const form = useForm({
     email: '',
@@ -25,7 +26,17 @@ const capture = () => {
 
 const submit = () => {
     stopCamera();
-    form.post(route('face.login.attempt'));
+    form.post(route('face.login.attempt'), {
+        onSuccess: () => {
+            showRetry.value = false; // login success
+        },
+        onError: () => {
+            showRetry.value = true; // login failed
+        },
+        onFinish: () => {
+            // allow re-capture if login fails
+        },
+    });
 };
 
 const stopCamera = () => {
@@ -62,6 +73,24 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     stopCamera();
 });
+
+const retake = async () => {
+    hasCaptured.value = false;
+    base64img.value = '';
+    form.base64img = '';
+    showRetry.value = false;
+
+    // Restart camera
+    try {
+        stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (webcamRef.value) {
+            webcamRef.value.srcObject = stream.value;
+        }
+    } catch (error) {
+        console.error('Error restarting camera:', error);
+    }
+    document.getElementById('email')?.focus();
+};
 </script>
 
 <template>
@@ -106,6 +135,24 @@ onBeforeUnmount(() => {
                         alt="Captured selfie"
                         class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
                     />
+                </div>
+
+                <div v-if="hasCaptured" class="flex flex-col items-center space-y-3">
+                    <img
+                        :src="base64img"
+                        alt="Captured selfie"
+                        class="rounded-full shadow-md w-24 h-24 object-cover ring ring-indigo-300"
+                    />
+
+                    <!-- Retry Button if login fails -->
+                    <button
+                        v-if="showRetry"
+                        type="button"
+                        @click="retake"
+                        class="text-sm text-indigo-600 hover:underline"
+                    >
+                        Retake Selfie
+                    </button>
                 </div>
 
                 <!-- Error Messages -->
