@@ -45,3 +45,10 @@ function something()
 {
     // ..
 }
+
+function fakeBase64Image(): string
+{
+    return 'data:image/jpeg;base64,' . base64_encode(
+            \Illuminate\Http\UploadedFile::fake()->image('selfie.jpg')->getContent()
+        );
+}

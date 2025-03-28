@@ -4,7 +4,6 @@ use App\Services\FaceMatch\MatchFaceService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\UploadedFile;
-
 use function Pest\Laravel\post;
 use App\Models\User;
 
@@ -13,7 +12,6 @@ beforeEach(function () {
 
     $this->user = User::factory()->create([
         'email' => 'johndoe@example.com',
-        // 'mobile' => '09171234567',
     ]);
 
     $this->user->addMedia(UploadedFile::fake()->image('face.jpg'))
@@ -22,18 +20,17 @@ beforeEach(function () {
 });
 
 test('user can login with face using user_id', function () {
-    // Mock the service and bind to container
     $mock = Mockery::mock(MatchFaceService::class);
-    $mock->shouldReceive('match')->once()->andReturn((object)[
-        'result' => (object)[
-            'details' => (object)[
-                'match' => (object)[
+    $mock->shouldReceive('match')->once()->andReturn([
+        'result' => [
+            'details' => [
+                'match' => [
                     'value' => 'yes',
-                    'confidence' => 99,
+                    'confidence' => 'high',
                 ]
             ],
-            'summary' => (object)[
-                'action' => 'pass'
+            'summary' => [
+                'action' => 'pass',
             ]
         ]
     ]);
@@ -50,16 +47,16 @@ test('user can login with face using user_id', function () {
 
 test('login fails if face match is unsuccessful', function () {
     $mock = Mockery::mock(MatchFaceService::class);
-    $mock->shouldReceive('match')->once()->andReturn((object)[
-        'result' => (object)[
-            'details' => (object)[
-                'match' => (object)[
+    $mock->shouldReceive('match')->once()->andReturn([
+        'result' => [
+            'details' => [
+                'match' => [
                     'value' => 'no',
-                    'confidence' => 42,
+                    'confidence' => 'low',
                 ]
             ],
-            'summary' => (object)[
-                'action' => 'fail'
+            'summary' => [
+                'action' => 'fail',
             ]
         ]
     ]);
@@ -88,10 +85,17 @@ test('login fails if required identifier is missing', function () {
 
 test('match face service receives expected arguments', function () {
     $spy = Mockery::spy(MatchFaceService::class);
-    $spy->shouldReceive('match')->once()->andReturn((object)[
-        'result' => (object)[
-            'details' => (object)['match' => (object)['value' => 'yes', 'confidence' => 99]],
-            'summary' => (object)['action' => 'pass']
+    $spy->shouldReceive('match')->once()->andReturn([
+        'result' => [
+            'details' => [
+                'match' => [
+                    'value' => 'yes',
+                    'confidence' => 'high',
+                ]
+            ],
+            'summary' => [
+                'action' => 'pass',
+            ]
         ]
     ]);
     app()->instance(MatchFaceService::class, $spy);
@@ -103,9 +107,3 @@ test('match face service receives expected arguments', function () {
 
     $spy->shouldHaveReceived('match');
 });
-
-function fakeBase64Image(): string
-{
-    $image = UploadedFile::fake()->image('selfie.jpg')->getContent();
-    return 'data:image/jpeg;base64,' . base64_encode($image);
-}
