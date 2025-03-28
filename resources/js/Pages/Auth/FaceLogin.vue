@@ -1,11 +1,33 @@
 <script setup>
+import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { onMounted, onBeforeUnmount, ref } from 'vue';
 
 const props = defineProps({
     autoFaceLogin: {
         type: Boolean,
         default: false,
+    },
+    fields: {
+        type: Array,
+        default: () => ['email'], // can be ['email', 'mobile', 'otp'], etc.
+    },
+    fieldLabels: {
+        type: Object,
+        default: () => ({
+            email: 'Email',
+            mobile: 'Mobile',
+            user_id: 'User ID',
+            otp: 'One-Time Password',
+        }),
+    },
+    validationRules: {
+        type: Object,
+        default: () => ({
+            email: ['required', 'email'],
+            mobile: ['required', 'regex:^09\\d{9}$'],
+            user_id: ['required'],
+            otp: ['required', 'digits:6'],
+        }),
     },
 });
 
@@ -16,11 +38,46 @@ const stream = ref(null);
 const timeoutId = ref(null);
 const showRetry = ref(false);
 const retrying = ref(false);
-
+const formFields = Object.fromEntries(
+    props.fields.map((field) => [field, ''])
+);
 const form = useForm({
-    email: '',
+    ...formFields,
     base64img: '',
 });
+
+const validateFields = () => {
+    for (const field of props.fields) {
+        const rules = props.validationRules[field] || [];
+        const value = form[field];
+
+        for (const rule of rules) {
+            if (rule === 'required' && !value) {
+                form.setError(field, `${props.fieldLabels[field] || field} is required.`);
+                return false;
+            }
+            if (rule === 'email' && value && !/^\S+@\S+\.\S+$/.test(value)) {
+                form.setError(field, 'Invalid email format.');
+                return false;
+            }
+            if (rule.startsWith('regex:')) {
+                const pattern = new RegExp(rule.split('regex:')[1]);
+                if (!pattern.test(value)) {
+                    form.setError(field, `Invalid ${props.fieldLabels[field] || field}`);
+                    return false;
+                }
+            }
+            if (rule.startsWith('digits:')) {
+                const length = rule.split('digits:')[1];
+                if (!/^\d+$/.test(value) || value.length !== +length) {
+                    form.setError(field, `${props.fieldLabels[field] || field} must be ${length} digits`);
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+};
 
 const capture = () => {
     const canvas = document.createElement('canvas');
@@ -50,6 +107,9 @@ const stopCamera = () => {
 
 const submit = () => {
     stopCamera();
+
+    if (!validateFields()) return;
+
     form.post(route('face.login.attempt'), {
         onSuccess: () => {
             showRetry.value = false; // login success
@@ -122,6 +182,14 @@ const retake = async () => {
         capture(); // 👈 capture will call submit() again if autoFaceLogin is true
     }, 1000); // adjust delay if needed
 };
+
+const fieldTypes = {
+    email: 'email',
+    mobile: 'tel',
+    user_id: 'text',
+    otp: 'text',
+};
+
 </script>
 
 <template>
@@ -131,16 +199,30 @@ const retake = async () => {
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Login with Face</h2>
 
                 <form @submit.prevent="submit" class="space-y-6">
-                    <!-- Email Field -->
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+<!--                    &lt;!&ndash; Email Field &ndash;&gt;-->
+<!--                    <div>-->
+<!--                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>-->
+<!--                        <input-->
+<!--                            id="email"-->
+<!--                            type="email"-->
+<!--                            v-model="form.email"-->
+<!--                            required-->
+<!--                            class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm"-->
+<!--                        />-->
+<!--                    </div>-->
+
+                    <div v-for="field in fields" :key="field" class="mb-4">
+                        <label :for="field" class="block text-sm font-medium text-gray-700 mb-1">
+                            {{ fieldLabels[field] || field }}
+                        </label>
                         <input
-                            id="email"
-                            type="email"
-                            v-model="form.email"
-                            required
+                            :id="field"
+                            v-model="form[field]"
+                            :type="field === 'email' ? 'email' : (field === 'mobile' ? 'tel' : 'text')"
+                            :placeholder="fieldLabels[field]"
                             class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm"
                         />
+                        <div v-if="form.errors[field]" class="text-sm text-red-600 mt-1">{{ form.errors[field] }}</div>
                     </div>
 
                     <!-- Camera or Captured Image -->
