@@ -43,10 +43,22 @@ class LivelinessService
                 ->post(config('kwyc-check.credential.base_url') . $this->endpoint);
 
             if ($response->failed()) {
-                Log::error('[LivelinessService] API failed', [
+                Log::error("[LivelinessService] API failed", [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+
+                $json = $response->json();
+
+                // Try to extract the friendly error message
+                $summary = $json['result']['summary']['details'] ?? [];
+                $friendly = collect($summary)->pluck('message')->implode('; ');
+
+                if ($friendly) {
+                    throw new Exception("Liveliness check failed: {$friendly}");
+                }
+
+                // fallback
                 throw new RequestException($response);
             }
 

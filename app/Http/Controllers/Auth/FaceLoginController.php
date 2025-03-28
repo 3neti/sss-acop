@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Services\FaceMatch\FaceVerificationPipeline;
 use App\Http\Requests\Auth\FaceLoginRequest;
-use App\Services\FaceMatch\MatchFaceService;
 use Inertia\Response as InertiaResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\RedirectResponse;
@@ -48,24 +48,22 @@ class FaceLoginController extends Controller
             return back()->withErrors(['base64img' => 'No profile image found.']);
         }
 
-        $storedImagePath = Storage::disk($media->disk)->path($media->getPathRelativeToRoot());
-        $referenceCode = uniqid('face_', true);
-
         try {
-            $matcher = app(MatchFaceService::class);
+            $storedImagePath = Storage::disk($media->disk)->path($media->getPathRelativeToRoot());
+            $referenceCode = uniqid('face_', true);
 
-            $result = $matcher->match(
+            $pipeline = app(FaceVerificationPipeline::class);
+
+            $result = $pipeline->verify(
                 referenceCode: $referenceCode,
                 base64img: $request->base64img,
-                storedImagePath: $storedImagePath,
-                type: $request->type ?? 'face_face'
+                storedImagePath: $storedImagePath
             );
 
-            Log::debug('[FaceLogin] Face match response', ['result' => $result]);
-
-            $match      = Arr::get($result, 'result.details.match.value');
+            // Continue with match evaluation...
+            $match = Arr::get($result, 'result.details.match.value');
             $confidence = Arr::get($result, 'result.details.match.confidence');
-            $action     = Arr::get($result, 'result.summary.action');
+            $action = Arr::get($result, 'result.summary.action');
 
             $confidenceMap = [
                 'very_high' => 95,
@@ -76,13 +74,9 @@ class FaceLoginController extends Controller
 
             $confidenceScore = $confidenceMap[strtolower($confidence)] ?? 0;
 
-            Log::info('[FaceLogin] Face evaluation', compact('match', 'confidence', 'confidenceScore', 'action'));
-
             if ($match === 'yes' && $action === 'pass' && $confidenceScore >= 85) {
                 Auth::login($user);
                 $request->session()->regenerate();
-
-                Log::info('[FaceLogin] Login successful', ['user_id' => $user->id]);
                 return redirect()->intended(route('dashboard'));
             }
 
@@ -108,8 +102,22 @@ class FaceLoginController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // Try to extract Hyperverge error message if available
+            $pattern = '/{.+}/s'; // match JSON from message
+            if (preg_match($pattern, $e->getMessage(), $matches)) {
+                $json = json_decode($matches[0], true);
+                $details = data_get($json, 'result.summary.details', []);
+                $reason = collect($details)->pluck('message')->implode('; ');
+
+                if ($reason) {
+                    return back()->withErrors([
+                        'base64img' => "Face login failed. {$reason}",
+                    ]);
+                }
+            }
+
             return back()->withErrors([
-                'base64img' => 'Face login failed. Please try again or contact support.',
+                'base64img' => 'Face login failed. ' . $e->getMessage(),
             ]);
         }
     }
