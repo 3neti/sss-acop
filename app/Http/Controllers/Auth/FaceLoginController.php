@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Requests\Auth\FaceLoginRequest;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Actions\MatchFace;
 use App\Models\User;
 use Exception;
@@ -20,7 +20,7 @@ class FaceLoginController extends Controller
         'user_id' => 'id',
     ];
 
-    public function showForm()
+    public function showForm(): \Inertia\Response|\Inertia\ResponseFactory
     {
         return inertia('Auth/FaceLogin', [
             'fields' => $this->fields, //array
@@ -28,10 +28,8 @@ class FaceLoginController extends Controller
         ]);
     }
 
-    public function authenticate(Request $request)
+    public function authenticate(FaceLoginRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $request->validate($this->rules());
-
         // 1. Find user by identifier
         $userQuery = User::query();
         $foundField = null;
@@ -92,23 +90,5 @@ class FaceLoginController extends Controller
                 'base64img' => 'Face login failed. ' . $e->getMessage(),
             ]);
         }
-    }
-
-    public function rules(): array
-    {
-        $rules = [
-            'base64img' => ['required', 'string'],
-        ];
-
-        foreach ($this->fields as $field) {
-            $rules[$field] = match ($field) {
-                'email' => ['required', 'email', 'exists:users,email'],
-                'mobile' => ['required', 'regex:/^09\d{9}$/', 'exists:users,mobile'],
-                'user_id' => ['required', 'integer', 'exists:users,id'],
-                default => ['required'], // fallback for other fields
-            };
-        }
-
-        return $rules;
     }
 }
