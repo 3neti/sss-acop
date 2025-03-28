@@ -2,12 +2,13 @@
 
 namespace App\Actions;
 
+use Lorisleiva\Actions\Concerns\AsAction;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Lorisleiva\Actions\Concerns\AsAction;
 use Exception;
 
+/** @deprecated  */
 class MatchFace
 {
     use AsAction;
@@ -59,17 +60,9 @@ class MatchFace
             $response = Http::withHeaders($headers)
                 ->attach('selfie', fopen($selfiePath, 'r'), 'selfie.jpeg')
                 ->attach('selfie2', fopen($storedImagePath, 'r'), 'stored.jpeg');
-//                ->attach('image1', fopen($selfiePath, 'r'), 'selfie.jpeg')
-//                ->attach('image2', fopen($storedImagePath, 'r'), 'stored.jpeg')
-//                ->attach('image1', file_get_contents($selfiePath), 'selfie.jpeg')
-//                ->attach('image2', file_get_contents($storedImagePath), 'stored.jpeg')
             ;
 
-//            if ($type) {
-//                $response = $response->attach('type', $type);
-//            }
             $response = $response->attach('type', $type ?? 'face_face');
-
             $response = $response->post(config('kwyc-check.credential.base_url') . '/matchFace');
 
             if ($response->failed()) {

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Requests\Auth\FaceLoginRequest;
+use App\Services\FaceMatch\MatchFaceService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
-use App\Actions\MatchFace;
 use App\Models\User;
 use Exception;
 
@@ -55,15 +55,17 @@ class FaceLoginController extends Controller
         // 2. Get stored profile image path
         $media = $user->getFirstMedia('profile');
         if (!$media) {
-            return back()->withErrors(['email' => 'No profile image found for facial match.']);
+            return back()->withErrors([$foundField => 'No profile image found for facial match.']);
         }
 
         try {
             $storedImagePath = Storage::disk($media->disk)->path($media->getPathRelativeToRoot());
             $referenceCode = uniqid();
 
-            // 3. Call the MatchFace action
-            $result = MatchFace::run(
+            // 3. Resolve and run the MatchFaceService
+            $faceMatcher = app(MatchFaceService::class);
+
+            $result = $faceMatcher->match(
                 referenceCode: $referenceCode,
                 base64img: $request->base64img,
                 storedImagePath: $storedImagePath,
