@@ -7,4 +7,5 @@ return [
         'mobile' => ['required', 'regex:/^09\d{9}$/', 'exists:users,mobile'],
         'user_id' => ['required', 'integer', 'exists:users,id'],
     ],
+    'result_cache_ttl' => env('RESULT_CACHE_TTL', 30),
 ];
