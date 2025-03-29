@@ -2,9 +2,9 @@
 
 namespace App\Actions;
 
-use Illuminate\Support\Facades\{Cache, Http, Log};
 use Psr\SimpleCache\InvalidArgumentException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\{Http, Log};
 use Lorisleiva\Actions\Concerns\AsAction;
 use App\Events\KYCResultFetched;
 use App\Events\KYCResultFailed;
@@ -16,12 +16,11 @@ class FetchKYCResult
     use AsAction;
 
     protected string $endpoint = 'https://ind.idv.hyperverge.co/v1/link-kyc/results';
-    protected string $cacheKeyPrefix = 'kyc_result:';
+    protected string $cachePrefix = 'kyc_result';
     protected string $tag = 'kyc_results';
-    protected string $manualRegistryKey = 'kyc_result_keys';
 
     /**
-     * Fetch and cache KYC results.
+     * Fetch and cache KYC results using context().
      *
      * @param string $transactionId
      * @param int|null $ttl in minutes
@@ -30,104 +29,72 @@ class FetchKYCResult
      */
     public function handle(string $transactionId, ?int $ttl = null): KYCResultData
     {
-        $cacheKey = $this->cacheKeyPrefix . $transactionId;
         $cacheTtl = $ttl ?? config('sss-acop.result_cache_ttl', 30);
-        $supportsTags = $this->supportsCacheTags();
 
-        $cache = $supportsTags ? Cache::tags([$this->tag]) : Cache::store();
+        return cache_context($this->cachePrefix)
+            ->tag($this->tag)
+            ->ttl($cacheTtl)
+            ->remember($transactionId, function () use ($transactionId) {
+                $headers = [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                    'appId' => config('kwyc-check.credential.appId'),
+                    'appKey' => config('kwyc-check.credential.appKey'),
+                ];
 
-        if ($cache->has($cacheKey)) {
-            return $cache->get($cacheKey);
-        }
+                $payload = ['transactionId' => $transactionId];
 
-        $headers = [
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-            'appId' => config('kwyc-check.credential.appId'),
-            'appKey' => config('kwyc-check.credential.appKey'),
-        ];
+                try {
+                    $response = Http::withHeaders($headers)
+                        ->timeout(15)
+                        ->retry(2, 200)
+                        ->post($this->endpoint, $payload);
 
-        $payload = ['transactionId' => $transactionId];
+                    if ($response->failed()) {
+                        Log::error('[FetchKYCResult] API request failed', [
+                            'transactionId' => $transactionId,
+                            'status' => $response->status(),
+                            'body' => $response->body(),
+                        ]);
 
-        try {
-            $response = Http::withHeaders($headers)
-                ->timeout(15)
-                ->retry(2, 200)
-                ->post($this->endpoint, $payload);
+                        event(new KYCResultFailed($transactionId, $response->json()));
 
-            if ($response->failed()) {
-                Log::error('[FetchKYCResult] API request failed', [
-                    'transactionId' => $transactionId,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
+                        throw new RequestException($response);
+                    }
 
-                event(new KYCResultFailed($transactionId, $response->json()));
+                    $json = $response->json();
+                    $result = KYCResultData::from($json);
 
-                throw new RequestException($response);
-            }
+                    event(new KYCResultFetched($transactionId, $result));
 
-            $json = $response->json();
-            $result = KYCResultData::from($json);
+                    Log::info('[FetchKYCResult] KYC result fetched and cached via context()', [
+                        'transactionId' => $transactionId,
+                        'applicationStatus' => $result->result->applicationStatus,
+                    ]);
 
-            $cache->put($cacheKey, $result, now()->addMinutes($cacheTtl));
+                    return $result;
 
-            if (! $supportsTags) {
-                $this->trackManualKey($cacheKey);
-            }
+                } catch (RequestException $e) {
+                    Log::critical('[FetchKYCResult] RequestException', [
+                        'transactionId' => $transactionId,
+                        'message' => $e->getMessage(),
+                    ]);
 
-            event(new KYCResultFetched($transactionId, $result));
+                    event(new KYCResultFailed($transactionId, ['exception' => $e->getMessage()]));
 
-            Log::info('[FetchKYCResult] KYC result successfully fetched and cached', [
-                'transactionId' => $transactionId,
-                'applicationStatus' => $result->result->applicationStatus,
-            ]);
+                    throw new Exception("Failed to fetch KYC result: " . $e->getMessage(), previous: $e);
 
-            return $result;
+                } catch (\Throwable $e) {
+                    Log::critical('[FetchKYCResult] Unexpected Error', [
+                        'transactionId' => $transactionId,
+                        'message' => $e->getMessage(),
+                    ]);
 
-        } catch (RequestException $e) {
-            Log::critical('[FetchKYCResult] RequestException', [
-                'transactionId' => $transactionId,
-                'message' => $e->getMessage(),
-            ]);
+                    event(new KYCResultFailed($transactionId, ['exception' => $e->getMessage()]));
 
-            event(new KYCResultFailed($transactionId, ['exception' => $e->getMessage()]));
-
-            throw new Exception("Failed to fetch KYC result: " . $e->getMessage(), previous: $e);
-
-        } catch (\Throwable $e) {
-            Log::critical('[FetchKYCResult] Unexpected Error', [
-                'transactionId' => $transactionId,
-                'message' => $e->getMessage(),
-            ]);
-
-            event(new KYCResultFailed($transactionId, ['exception' => $e->getMessage()]));
-
-            throw new Exception("Unexpected error while fetching KYC result.", previous: $e);
-        }
-    }
-
-    /**
-     * Check if current cache driver supports tagging.
-     */
-    protected function supportsCacheTags(): bool
-    {
-        $store = Cache::getStore();
-
-        return method_exists($store, 'tags') &&
-            in_array(class_basename($store), ['RedisStore', 'MemcachedStore']);
-    }
-
-    /**
-     * Track manually stored keys for non-tagging cache drivers.
-     */
-    protected function trackManualKey(string $key): void
-    {
-        $keys = Cache::get($this->manualRegistryKey, []);
-        if (! in_array($key, $keys)) {
-            $keys[] = $key;
-            Cache::forever($this->manualRegistryKey, $keys);
-        }
+                    throw new Exception("Unexpected error while fetching KYC result.", previous: $e);
+                }
+            });
     }
 
     /**
