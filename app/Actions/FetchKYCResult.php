@@ -2,9 +2,9 @@
 
 namespace App\Actions;
 
-use Psr\SimpleCache\InvalidArgumentException;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\{Http, Log};
+use Illuminate\Http\Client\RequestException;
+use Psr\SimpleCache\InvalidArgumentException;
 use Lorisleiva\Actions\Concerns\AsAction;
 use App\Events\KYCResultFetched;
 use App\Events\KYCResultFailed;
@@ -20,14 +20,14 @@ class FetchKYCResult
     protected string $tag = 'kyc_results';
 
     /**
-     * Fetch and cache KYC results using context().
+     * Fetch and parse KYC results from Hyperverge.
      *
      * @param string $transactionId
-     * @param int|null $ttl in minutes
-     * @return KYCResultData
+     * @param int|null $ttl
+     * @return array{kyc: KYCResultData, idCardModule: ?IdCardValidationModuleData}
      * @throws Exception|InvalidArgumentException
      */
-    public function handle(string $transactionId, ?int $ttl = null): KYCResultData
+    public function handle(string $transactionId, ?int $ttl = null): array
     {
         $cacheTtl = $ttl ?? config('sss-acop.result_cache_ttl', 30);
 
@@ -63,16 +63,21 @@ class FetchKYCResult
                     }
 
                     $json = $response->json();
-                    $result = KYCResultData::from($json);
+                    $kyc = KYCResultData::from($json);
+                    $idCardModule = ExtractIdCardValidationModule::run($kyc);
 
-                    event(new KYCResultFetched($transactionId, $result));
+                    event(new KYCResultFetched($transactionId, $kyc));
 
-                    Log::info('[FetchKYCResult] KYC result fetched and cached via context()', [
+                    Log::info('[FetchKYCResult] KYC result fetched & parsed', [
                         'transactionId' => $transactionId,
-                        'applicationStatus' => $result->result->applicationStatus,
+                        'applicationStatus' => $kyc->result->applicationStatus,
+                        'idCardParsed' => filled($idCardModule),
                     ]);
 
-                    return $result;
+                    return [
+                        'kyc' => $kyc,
+                        'idCardModule' => $idCardModule,
+                    ];
 
                 } catch (RequestException $e) {
                     Log::critical('[FetchKYCResult] RequestException', [
@@ -98,10 +103,10 @@ class FetchKYCResult
     }
 
     /**
-     * Static shortcut to get the applicationStatus string.
+     * Shortcut to return only the application status.
      */
     public static function get(string $transactionId): string
     {
-        return static::run($transactionId)->result->applicationStatus;
+        return static::run($transactionId)['kyc']->result->applicationStatus;
     }
 }
