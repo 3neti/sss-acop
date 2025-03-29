@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\{Http, Log};
 use Illuminate\Http\Client\RequestException;
 use Psr\SimpleCache\InvalidArgumentException;
 use Lorisleiva\Actions\Concerns\AsAction;
+use App\Support\ParsedKYCResult;
 use App\Events\KYCResultFetched;
 use App\Events\KYCResultFailed;
 use App\Data\KYCResultData;
@@ -24,10 +25,10 @@ class FetchKYCResult
      *
      * @param string $transactionId
      * @param int|null $ttl
-     * @return array{kyc: KYCResultData, idCardModule: ?IdCardValidationModuleData}
+     * @return ParsedKYCResult}
      * @throws Exception|InvalidArgumentException
      */
-    public function handle(string $transactionId, ?int $ttl = null): array
+    public function handle(string $transactionId, ?int $ttl = null): ParsedKYCResult
     {
         $cacheTtl = $ttl ?? config('sss-acop.result_cache_ttl', 30);
 
@@ -74,10 +75,12 @@ class FetchKYCResult
                         'idCardParsed' => filled($idCardModule),
                     ]);
 
-                    return [
-                        'kyc' => $kyc,
-                        'idCardModule' => $idCardModule,
-                    ];
+                    return new ParsedKYCResult($kyc, $idCardModule);
+
+//                    return [
+//                        'kyc' => $kyc,
+//                        'idCardModule' => $idCardModule,
+//                    ];
 
                 } catch (RequestException $e) {
                     Log::critical('[FetchKYCResult] RequestException', [
