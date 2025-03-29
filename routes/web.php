@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\FaceLoginController;
+use App\Http\Controllers\HypervergeWebhookController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/test-image', [\App\Http\Controllers\TestController::class, 'showBase64Page'])->name('test.image');
-
+Route::get('/webhooks/hyperverge', HypervergeWebhookController::class)
+    ->name('webhooks.hyperverge');
 
 require __DIR__.'/auth.php';

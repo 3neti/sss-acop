@@ -15,6 +15,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "lorisleiva/laravel-actions": "^2.9",
+        "spatie/laravel-data": "^4.14",
         "spatie/laravel-medialibrary": "^11.12",
         "tightenco/ziggy": "^2.0"
     },
