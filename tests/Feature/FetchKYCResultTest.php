@@ -27,9 +27,9 @@ class FetchKYCResultTest extends TestCase
 
         $this->assertInstanceOf(ParsedKYCResult::class, $result);
         $this->assertEquals('auto_approved', $result->applicationStatus());
-        $this->assertEquals('phl_dl', $result->getRaw()['idCardModule']->idType);
+        $this->assertEquals('phl_dl', $result->getRaw()['idCardModule']->idType->value);
         $this->assertEquals('HURTADO, LESTER BIADORA', $result->getRaw()['idCardModule']->fields['fullName']);
-        $this->assertEquals('phl_dl', $result->idCardModule->idType);
+        $this->assertEquals('phl_dl', $result->idCardModule->idType->value);
         $this->assertEquals('HURTADO, LESTER BIADORA', $result->idCardModule->fields['fullName']);
 
         Event::assertDispatched(KYCResultFetched::class);
