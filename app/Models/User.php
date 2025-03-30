@@ -4,28 +4,15 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Notifications\Notifiable;
-use Spatie\MediaLibrary\HasMedia;
+use App\KYC\Contracts\KYCUserInterface;
+use App\KYC\Traits\HasKYCUser;
 
-/**
- * Class User.
- *
- * @property int         $id
- * @property string      $name
- * @property string      $email
- * @property string      $mobile
- * @property string      $country
- * @property \DateTime   $birthdate
- *
- * @method int getKey()
- */
-class User extends Authenticatable implements HasMedia
+class User extends Authenticatable implements KYCUserInterface
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
-    use InteractsWithMedia;
+    use HasKYCUser;
 
     /**
      * The attributes that are mass assignable.
@@ -34,16 +21,8 @@ class User extends Authenticatable implements HasMedia
      */
     protected $fillable = [
         'name',
-        'id_number',
-        'id_type',
         'email',
-        'mobile',
-        'country',
-        'birthdate',
-    ];
-
-    protected $casts = [
-        'birthdate' => 'date',
+        'password'
     ];
 
     /**
@@ -67,23 +46,5 @@ class User extends Authenticatable implements HasMedia
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
-    }
-
-    public static function booted(): void
-    {
-        static::creating(function (User $user) {
-            $user->password = empty($user->password) ? bcrypt('password') : $user->password;
-            $user->country = empty($user->country) ? 'PH' : $user->country;
-        });
-    }
-
-    public function getPhotoAttribute()
-    {
-        return $this->getFirstMedia('photo');
-    }
-
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('photo')->singleFile();
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\FaceMatch\LivelinessService;
+use App\KYC\Services\LivelinessService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 

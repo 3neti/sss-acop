@@ -1,8 +1,7 @@
 <?php
 
-use App\Http\Controllers\Auth\FaceLoginController;
-use App\Http\Controllers\HypervergeWebhookController;
 use App\Http\Controllers\ProfileController;
+use App\KYC\Http\HypervergeWebhookController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;

@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\HypervergeStatusReceived;
+use App\KYC\Events\HypervergeStatusReceived;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 

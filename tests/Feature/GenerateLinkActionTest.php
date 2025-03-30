@@ -1,7 +1,7 @@
 <?php
 
+use App\KYC\Actions\GenerateLink;
 use Illuminate\Support\Facades\Http;
-use App\Actions\GenerateLink;
 
 test('GenerateLink returns valid URL on success', function () {
     Http::fake([

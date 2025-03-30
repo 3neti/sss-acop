@@ -1,11 +1,11 @@
 <?php
 
-use App\Services\FaceMatch\MatchFaceService;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\UploadedFile;
-use function Pest\Laravel\post;
+use App\KYC\Services\MatchFaceService;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use function Pest\Laravel\post;
 
 beforeEach(function () {
     Storage::fake('public');
