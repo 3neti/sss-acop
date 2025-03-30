@@ -28,14 +28,24 @@ class CreateUserFromKYCResult
         }
 
         $user = User::firstOrCreate(
-            ['mobile' => $parsed->idNumber()], // assumes uniqueness
+            ['id_number' => $parsed->idNumber()], // stronger key
             [
                 'name' => $parsed->fullName(),
-                'birthdate' => $parsed->birthdate() ?? now(),
-                'country' => 'PH',
+                'birthdate' => $parsed->birthdate(),
+                'id_type' => $parsed->idType(),
                 'email' => null,
             ]
         );
+
+//        $user = User::firstOrCreate(
+//            ['mobile' => $parsed->idNumber()], // assumes uniqueness
+//            [
+//                'name' => $parsed->fullName(),
+//                'birthdate' => $parsed->birthdate() ?? now(),
+//                'country' => 'PH',
+//                'email' => null,
+//            ]
+//        );
 
         if ($parsed->photo()) {
             $user->addMediaFromUrl($parsed->photo())

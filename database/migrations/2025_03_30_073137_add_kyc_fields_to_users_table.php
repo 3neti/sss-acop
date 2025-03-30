@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('mobile')->unique()->after('id');
-            $table->string('country')->default('PH')->after('mobile');
+            $table->string('id_number')->unique()->after('id');
+            $table->string('id_type')->nullable()->after('id_number');
+            $table->string('mobile')->nullable()->after('id_type');
+            $table->string('country')->nullable()->after('mobile');
             $table->date('birthdate')->after('country');
             $table->string('email')->nullable()->change();
         });
@@ -25,6 +27,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('id_number');
+            $table->dropColumn('id_type');
             $table->dropColumn('mobile');
             $table->dropColumn('country');
             $table->dropColumn('birthdate');

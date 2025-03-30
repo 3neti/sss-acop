@@ -43,7 +43,7 @@ class FaceLoginController extends Controller
             return back()->withErrors(['base64img' => 'User not found or invalid identifier.']);
         }
 
-        $media = $user->getFirstMedia('profile');
+        $media = $user->getFirstMedia('photo');
         if (!$media) {
             return back()->withErrors(['base64img' => 'No profile image found.']);
         }
