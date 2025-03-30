@@ -66,6 +66,7 @@ class FetchKYCResult
                     $json = $response->json();
                     $kyc = KYCResultData::from($json);
                     $idCardModule = ExtractIdCardValidationModule::run($kyc);
+                    $selfieModule = ExtractSelfieValidationModule::run($kyc);
 
                     event(new KYCResultFetched($transactionId, $kyc));
 
@@ -75,7 +76,7 @@ class FetchKYCResult
                         'idCardParsed' => filled($idCardModule),
                     ]);
 
-                    return new ParsedKYCResult($kyc, $idCardModule);
+                    return new ParsedKYCResult($kyc, $idCardModule, $selfieModule);
 
 //                    return [
 //                        'kyc' => $kyc,

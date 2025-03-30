@@ -3,18 +3,19 @@
 namespace App\Support;
 
 use App\Data\IdCardValidationModuleData;
-use App\Pipelines\MapIdType;
+use App\Data\SelfieValidationModuleData;
+use Illuminate\Support\{Arr, Str};
 use Illuminate\Pipeline\Pipeline;
 use App\Pipelines\TransformName;
-use Illuminate\Support\Arr;
+use App\Pipelines\MapIdType;
 use App\Data\KYCResultData;
-use Illuminate\Support\Str;
 
 class ParsedKYCResult
 {
     public function __construct(
         public readonly KYCResultData $kyc,
         public readonly ?IdCardValidationModuleData $idCardModule = null,
+        public ?SelfieValidationModuleData $selfieModule = null,
     ) {}
 
     public function applicationStatus(): string
@@ -33,16 +34,6 @@ class ParsedKYCResult
             : null;
     }
 
-//    public function idType(): ?string
-//    {
-//        return $this->idCardModule?->idType;
-//    }
-
-//    public function fullName(): ?string
-//    {
-//        return $this->idCardModule?->fields['fullName'] ?? null;
-//    }
-
     public function fullName(): ?string
     {
         $raw = Arr::get($this->idCardModule?->fields, 'fullName');
@@ -58,11 +49,6 @@ class ParsedKYCResult
     {
         return Str::of(Arr::get($this->idCardModule?->fields, 'address'))->title();
     }
-
-//    public function idNumber(): ?string
-//    {
-//        return $this->idCardModule?->fields['idNumber'] ?? null;
-//    }
 
     public function idNumber(): ?string
     {
@@ -83,6 +69,14 @@ class ParsedKYCResult
             ->toString();
     }
 
+    /**
+     * Get the selfie image URL from the Selfie Validation module.
+     */
+    public function photo(): ?string
+    {
+        return $this->selfieModule?->imageUrl ?? null;
+    }
+
     public function toArray(): array
     {
         return [
@@ -91,7 +85,8 @@ class ParsedKYCResult
             'fullName' => $this->fullName(),
             'address' => $this->address(),
             'idNumber' => $this->idNumber(),
-            'birthDate' => $this->birthDate(),
+            'birthDate' => $this->birthdate(),
+            'photo' => $this->photo(),
         ];
     }
 
@@ -100,6 +95,7 @@ class ParsedKYCResult
         return [
             'kyc' => $this->kyc,
             'idCardModule' => $this->idCardModule,
+            'selfieModule' => $this->selfieModule,
         ];
     }
 }

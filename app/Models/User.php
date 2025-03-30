@@ -9,6 +9,18 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Notifications\Notifiable;
 use Spatie\MediaLibrary\HasMedia;
 
+/**
+ * Class User.
+ *
+ * @property int         $id
+ * @property string      $name
+ * @property string      $email
+ * @property string      $mobile
+ * @property string      $country
+ * @property \DateTime   $birthdate
+ *
+ * @method int getKey()
+ */
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -23,7 +35,13 @@ class User extends Authenticatable implements HasMedia
     protected $fillable = [
         'name',
         'email',
-        'password',
+        'mobile',
+        'country',
+        'birthdate',
+    ];
+
+    protected $casts = [
+        'birthdate' => 'date',
     ];
 
     /**
@@ -47,5 +65,23 @@ class User extends Authenticatable implements HasMedia
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public static function booted(): void
+    {
+        static::creating(function (User $user) {
+            $user->password = empty($user->password) ? bcrypt('password') : $user->password;
+            $user->country = empty($user->country) ? 'PH' : $user->country;
+        });
+    }
+
+    public function getPhotoAttribute()
+    {
+        return $this->getFirstMedia('photo');
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('photo')->singleFile();
     }
 }
