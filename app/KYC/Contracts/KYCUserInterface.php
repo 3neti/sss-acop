@@ -9,10 +9,6 @@ use Spatie\MediaLibrary\HasMedia;
 
 interface KYCUserInterface extends HasMedia
 {
-//    public function getKey();
-
-//    public function getEmailForVerification();
-
     public function getPhotoAttribute(): ?Media;
 
     public function getKYCIdentifier(): string;
