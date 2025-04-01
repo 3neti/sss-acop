@@ -2,7 +2,7 @@
 
 namespace App\KYC\Actions;
 
-use App\KYC\Events\{KYCResultFailed, KYCResultFetched};
+use App\KYC\Events\{HypervergeStatusReceived, KYCResultFailed, KYCResultFetched};
 use Psr\SimpleCache\InvalidArgumentException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\{Http, Log};
@@ -98,6 +98,16 @@ class FetchKYCResult
                     throw new Exception("Unexpected error while fetching KYC result.", previous: $e);
                 }
             });
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function asListener(HypervergeStatusReceived $event): void
+    {
+        if ($event->status === 'auto_approved') {
+            $this->handle($event->transactionId);
+        }
     }
 
     /**
