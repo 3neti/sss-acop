@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class FaceLoginRequest extends FormRequest
 {
-    protected array $fields = ['user_id']; // You can override this via constructor or config
+    protected array $fields = ['id_number', 'id_type']; // You can override this via constructor or config
 
     public function authorize(): bool
     {

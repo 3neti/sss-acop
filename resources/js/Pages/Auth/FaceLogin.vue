@@ -18,6 +18,8 @@ const props = defineProps({
             mobile: 'Mobile',
             user_id: 'User ID',
             otp: 'One-Time Password',
+            id_number: 'ID Number',
+            id_type: 'ID Type'
         }),
     },
     validationRules: {
@@ -26,9 +28,15 @@ const props = defineProps({
             email: ['required', 'email'],
             mobile: ['required', 'regex:^09\\d{9}$'],
             user_id: ['required'],
+            id_number: ['required'],
+            id_type: ['required'],
             otp: ['required', 'digits:6'],
         }),
     },
+    idTypes: {
+        type: Object,
+        default: null,
+    }
 });
 
 const webcamRef = ref(null);
@@ -107,7 +115,6 @@ const stopCamera = () => {
 
 const submit = () => {
     stopCamera();
-
     if (!validateFields()) return;
 
     form.post(route('face.login.attempt'), {
@@ -187,6 +194,8 @@ const fieldTypes = {
     email: 'email',
     mobile: 'tel',
     user_id: 'text',
+    id_number: 'text',
+    id_type: 'text',
     otp: 'text',
 };
 
@@ -199,30 +208,41 @@ const fieldTypes = {
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Login with Face</h2>
 
                 <form @submit.prevent="submit" class="space-y-6">
-<!--                    &lt;!&ndash; Email Field &ndash;&gt;-->
-<!--                    <div>-->
-<!--                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>-->
-<!--                        <input-->
-<!--                            id="email"-->
-<!--                            type="email"-->
-<!--                            v-model="form.email"-->
-<!--                            required-->
-<!--                            class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm"-->
-<!--                        />-->
-<!--                    </div>-->
-
                     <div v-for="field in fields" :key="field" class="mb-4">
                         <label :for="field" class="block text-sm font-medium text-gray-700 mb-1">
                             {{ fieldLabels[field] || field }}
                         </label>
-                        <input
+
+                        <!-- Render dropdown for id_type -->
+                        <select
+                            v-if="field === 'id_type' && props.idTypes"
                             :id="field"
                             v-model="form[field]"
-                            :type="field === 'email' ? 'email' : (field === 'mobile' ? 'tel' : 'text')"
+                            class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm"
+                        >
+                            <option value="">Select ID Type</option>
+                            <option
+                                v-for="option in props.idTypes"
+                                :key="option.value"
+                                :value="option.value"
+                            >
+                                {{ option.label }}
+                            </option>
+                        </select>
+
+                        <!-- Render regular input for all other fields -->
+                        <input
+                            v-else
+                            :id="field"
+                            v-model="form[field]"
+                            :type="fieldTypes[field] || 'text'"
                             :placeholder="fieldLabels[field]"
                             class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm"
                         />
-                        <div v-if="form.errors[field]" class="text-sm text-red-600 mt-1">{{ form.errors[field] }}</div>
+
+                        <div v-if="form.errors[field]" class="text-sm text-red-600 mt-1">
+                            {{ form.errors[field] }}
+                        </div>
                     </div>
 
                     <!-- Camera or Captured Image -->

@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\FaceLoginRequest;
 use Inertia\Response as InertiaResponse;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\Controller;
+use App\KYC\Enums\HypervergeIdType;
 use Inertia\ResponseFactory;
 use Illuminate\Support\Arr;
 use App\Models\User;
@@ -15,18 +16,13 @@ use Exception;
 
 class FaceLoginController extends Controller
 {
-    protected array $fields = ['user_id'];
-
-    protected array $identifiers = [
-        'email'    => 'email',
-        'mobile'   => 'mobile',
-        'user_id'  => 'id',
-    ];
+    protected array $fields = ['id_number', 'id_type'];
 
     public function showForm(): InertiaResponse|ResponseFactory
     {
         return inertia('Auth/FaceLogin', [
             'fields' => $this->fields,
+            'idTypes' => HypervergeIdType::options(),
             'autoFaceLogin' => config('sss-acop.auto_face_login'),
         ]);
     }
@@ -123,15 +119,20 @@ class FaceLoginController extends Controller
     protected function findUserFromRequest(FaceLoginRequest $request): ?User
     {
         $query = User::query();
+        $conditions = [];
 
-        foreach ($this->identifiers as $input => $column) {
-            if ($request->filled($input)) {
-                Log::info('[FaceLogin] Identifier match', ['input' => $input, 'value' => $request->input($input)]);
-                return $query->where($column, $request->input($input))->first();
+        foreach ($this->fields as $field) {
+            if ($request->filled($field)) {
+                $conditions[$field] = $request->input($field);
             }
         }
 
-        Log::warning('[FaceLogin] No valid identifier provided.');
+        if (!empty($conditions)) {
+            Log::info('[FaceLogin] Dynamic identifier match', $conditions);
+            return $query->where($conditions)->first();
+        }
+        Log::warning('[FaceLogin] No valid dynamic identifiers provided.');
+
         return null;
     }
 }
