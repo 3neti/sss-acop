@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\KYC\Enums\HypervergeIdType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -29,6 +30,12 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+
+            'id_number' => (string) fake()->numberBetween(1000000000, 9999999999),
+            'id_type' => HypervergeIdType::random()->value,
+            'mobile' => fake()->phoneNumber,
+            'country' => 'phl',
+            'birthdate' => fake()->date,
         ];
     }
 

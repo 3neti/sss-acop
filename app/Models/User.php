@@ -3,15 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Bavix\Wallet\Traits\{CanConfirm, CanPayFloat, HasWalletFloat};
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Bavix\Wallet\Interfaces\{Confirmable, Customer, WalletFloat};
+use App\Commerce\Traits\CanTransferUnconfirmed;
 use Illuminate\Notifications\Notifiable;
 use App\KYC\Contracts\KYCUserInterface;
 use App\KYC\Traits\HasKYCUser;
 
-class User extends Authenticatable implements KYCUserInterface
+class User extends Authenticatable implements KYCUserInterface, Customer, WalletFloat, Confirmable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
+    use CanConfirm, CanPayFloat, HasWalletFloat;
     use HasFactory, Notifiable;
+    use CanTransferUnconfirmed;
     use HasKYCUser;
 
     /**
@@ -45,6 +50,17 @@ class User extends Authenticatable implements KYCUserInterface
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'balanceFloat' => 'float',
         ];
+    }
+
+    public function balance(): float
+    {
+        return $this->balanceFloat;
+    }
+
+    public function hasSufficientBalance(float $amount): bool
+    {
+        return $this->balanceFloat >= $amount;
     }
 }

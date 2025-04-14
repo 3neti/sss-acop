@@ -26,6 +26,11 @@ enum HypervergeIdType: string
         );
     }
 
+    public static function random(): self
+    {
+        return collect(self::cases())->random();
+    }
+
     public function country(): HypervergeCountry
     {
         return HypervergeCountry::PHL;
