@@ -16,8 +16,8 @@ class FacePaymentController extends Controller
         $validated = $request->validate([
             'vendor_id' => ['required', 'exists:vendors,id'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'description' => ['required', 'string', 'max:255'],
-            'reference_code' => ['nullable', 'string', 'max:100'],
+            'item_description' => ['required', 'string', 'max:255'],
+            'reference_id' => ['nullable', 'string', 'max:100'],
             'selfie' => ['required', 'string'], // base64 selfie
         ]);
 
@@ -35,23 +35,24 @@ class FacePaymentController extends Controller
                 ], Response::HTTP_PAYMENT_REQUIRED);
             }
 
-            // 3. 💸 Transfer funds (unconfirmed then auto-confirm)
+            // 3. 💸 Transfer funds
             $meta = [
                 'initiated_by' => 'face_login',
                 'transfer_type' => 'vendor_checkout',
-                'reason' => $validated['description'],
-                'reference_code' => $validated['reference_code'] ?? null,
+                'reason' => $validated['item_description'],
+                'reference_id' => $validated['reference_id'] ?? null,
             ];
 
             $transfer = $transferService->transferUnconfirmed($user, $vendor, $amount, $meta);
             $transferService->confirmTransfer($transfer);
             $transferService->finalizeTransfer($transfer);
 
-            // 4. ✅ Return result
+            // 4. ✅ Response
             return response()->json([
                 'message' => 'Payment successful',
                 'amount' => $amount,
-                'description' => $validated['description'],
+                'item_description' => $validated['item_description'],
+                'reference_id' => $validated['reference_id'] ?? null,
                 'user_id' => $user->id,
                 'transfer_uuid' => $transfer->uuid,
             ]);

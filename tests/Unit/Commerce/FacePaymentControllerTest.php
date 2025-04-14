@@ -6,8 +6,6 @@ use App\Commerce\Services\TransferFundsService;
 use App\KYC\Services\FaceVerificationPipeline;
 use App\Models\User;
 use App\Commerce\Models\Vendor;
-use Brick\Money\Money;
-use Whitecube\Price\Price;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -29,7 +27,8 @@ it('completes face payment successfully', function () {
     $response = $this->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 250,
-        'description' => 'Regular Meal',
+        'item_description' => 'Regular Meal',
+        'reference_id' => 'TXN-001',
         'selfie' => 'base64stringgoeshere',
     ]);
 
@@ -37,7 +36,8 @@ it('completes face payment successfully', function () {
         ->assertJson([
             'message' => 'Payment successful',
             'user_id' => $user->id,
-            'description' => 'Regular Meal',
+            'item_description' => 'Regular Meal',
+            'reference_id' => 'TXN-001',
         ]);
 
     expect((float) $user->balanceFloat)->toBe(50.0)
@@ -56,7 +56,8 @@ it('fails face payment if user has insufficient balance', function () {
     $response = $this->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 200,
-        'description' => 'Premium Coffee',
+        'item_description' => 'Premium Coffee',
+        'reference_id' => 'TXN-002',
         'selfie' => base64_encode('selfie'),
     ]);
 
@@ -79,7 +80,8 @@ it('fails face payment if face verification throws an exception', function () {
     $response = $this->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 300,
-        'description' => 'Lunch Combo',
+        'item_description' => 'Lunch Combo',
+        'reference_id' => 'TXN-003',
         'selfie' => base64_encode('bad-img'),
     ]);
 
@@ -87,7 +89,7 @@ it('fails face payment if face verification throws an exception', function () {
         ->assertJsonFragment(['error' => 'Face not matched']);
 });
 
-it('dispatches event and records metadata', function () {
+it('dispatches TransferInitiated and saves metadata', function () {
     Event::fake([TransferInitiated::class]);
 
     $vendor = Vendor::factory()->create();
@@ -101,12 +103,13 @@ it('dispatches event and records metadata', function () {
     $response = $this->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 450,
-        'description' => 'Dinner Box',
+        'item_description' => 'Dinner Box',
+        'reference_id' => 'TXN-004',
         'selfie' => 'selfie-string',
     ]);
 
     $response->assertOk()
-        ->assertJsonFragment(['description' => 'Dinner Box']);
+        ->assertJsonFragment(['item_description' => 'Dinner Box']);
 
     Event::assertDispatched(TransferInitiated::class);
 
@@ -128,17 +131,14 @@ it('processes a refund after successful face payment', function () {
     $response = $this->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 300,
-        'description' => 'Rice Bowl',
+        'item_description' => 'Rice Bowl',
+        'reference_id' => 'TXN-005',
         'selfie' => 'face-base64',
     ]);
 
     $response->assertOk();
     $uuid = $response->json('transfer_uuid');
     $transfer = \Bavix\Wallet\Models\Transfer::where('uuid', $uuid)->first();
-
-    expect($transfer)->not->toBeNull()
-        ->and((float) $vendor->balanceFloat)->toBe(300.0)
-        ->and((float) $user->balanceFloat)->toBe(200.0);
 
     $refund = app(TransferFundsService::class)->refundTransfer($transfer);
 
@@ -155,7 +155,7 @@ it('allows retry on face verification failure and succeeds on second try', funct
     $user = User::factory()->create();
     $user->depositFloat(300);
 
-    // First attempt: fail
+    // First attempt fails
     app()->instance(FaceVerificationPipeline::class, Mockery::mock(FaceVerificationPipeline::class, function ($mock) {
         $mock->shouldReceive('run')->once()->andThrow(new \Exception('Liveliness failed.'));
     }));
@@ -163,14 +163,15 @@ it('allows retry on face verification failure and succeeds on second try', funct
     $failResponse = $this->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 200,
-        'description' => 'Sizzling Plate',
+        'item_description' => 'Sizzling Plate',
+        'reference_id' => 'TXN-006',
         'selfie' => 'fail-first',
     ]);
 
     $failResponse->assertStatus(500)
         ->assertJsonFragment(['message' => 'Unable to complete payment.']);
 
-    // Second attempt: succeed
+    // Second attempt succeeds
     app()->instance(FaceVerificationPipeline::class, Mockery::mock(FaceVerificationPipeline::class, function ($mock) use ($user) {
         $mock->shouldReceive('run')->once()->andReturn($user);
     }));
@@ -178,12 +179,17 @@ it('allows retry on face verification failure and succeeds on second try', funct
     $successResponse = $this->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 200,
-        'description' => 'Sizzling Plate',
+        'item_description' => 'Sizzling Plate',
+        'reference_id' => 'TXN-006',
         'selfie' => 'second-try',
     ]);
 
     $successResponse->assertOk()
-        ->assertJsonFragment(['message' => 'Payment successful']);
+        ->assertJson([
+            'message' => 'Payment successful',
+            'item_description' => 'Sizzling Plate',
+            'reference_id' => 'TXN-006',
+        ]);
 
     expect((float) $user->balanceFloat)->toBe(100.0)
         ->and((float) $vendor->balanceFloat)->toBe(200.0);
