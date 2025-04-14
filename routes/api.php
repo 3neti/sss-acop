@@ -1,0 +1,13 @@
+<?php
+
+use App\Commerce\Http\Controllers\FacePaymentController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+
+Route::get('/user', function (Request $request) {
+    return $request->user();
+})->middleware('auth:sanctum');
+
+
+
+Route::post('/face-payment', FacePaymentController::class)->name('face.payment');

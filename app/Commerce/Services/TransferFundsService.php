@@ -9,13 +9,15 @@ use Bavix\Wallet\Interfaces\Customer;
 use Illuminate\Support\Facades\DB;
 use Bavix\Wallet\Models\Transfer;
 use Illuminate\Support\Str;
+use Whitecube\Price\Price;
+use Brick\Money\Money;
 
 class TransferFundsService
 {
-
-
-    public function transferUnconfirmed(Customer $from, Customer $to, float $amount, array $meta = []): Transfer
+    public function transferUnconfirmed(Customer $from, Customer $to, float|string|Money|Price $amount, array $meta = []): Transfer
     {
+        $amount = $this->normalizeAmount($amount);
+
         return DB::transaction(function () use ($from, $to, $amount, $meta): Transfer {
             $withdraw = $from->withdrawFloat($amount, $meta, confirmed: false);
             $deposit = $to->depositFloat($amount, $meta, confirmed: false);
@@ -34,7 +36,6 @@ class TransferFundsService
                 'extra' => $meta,
             ]);
 
-//            event(new TransferInitiated($transfer)); // ✅ Dispatch here
             event(new TransferInitiated(
                 uuid: $transfer->uuid,
                 fromId: $transfer->from_id,
@@ -191,5 +192,17 @@ class TransferFundsService
             'from' => $original->deposit->payable,
             'to' => $original->withdraw->payable,
         ];
+    }
+    protected function normalizeAmount(float|string|Money|Price $amount): float
+    {
+        if ($amount instanceof Price) {
+            return $amount->inclusive()->getAmount()->toFloat();
+        }
+
+        if ($amount instanceof Money) {
+            return $amount->getAmount()->toFloat();
+        }
+
+        return (float) $amount;
     }
 }
