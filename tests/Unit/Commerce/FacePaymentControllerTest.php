@@ -1,13 +1,13 @@
 <?php
 
-use App\Commerce\Events\TransferRefunded;
-use App\Commerce\Events\TransferInitiated;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Commerce\Services\TransferFundsService;
 use App\KYC\Services\FaceVerificationPipeline;
-use App\Models\User;
-use App\Commerce\Models\Vendor;
+use App\Commerce\Events\TransferInitiated;
+use App\Commerce\Events\TransferRefunded;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Commerce\Models\Vendor;
+use App\Models\User;
 
 uses(RefreshDatabase::class);
 
@@ -29,6 +29,8 @@ it('completes face payment successfully', function () {
         'amount' => 250,
         'item_description' => 'Regular Meal',
         'reference_id' => 'TXN-001',
+        'currency' => 'PHP',
+        'callback_url' => 'https://vendor.example.com/callback',
         'selfie' => 'base64stringgoeshere',
     ]);
 
@@ -38,6 +40,8 @@ it('completes face payment successfully', function () {
             'user_id' => $user->id,
             'item_description' => 'Regular Meal',
             'reference_id' => 'TXN-001',
+            'currency' => 'PHP',
+            'callback_url' => 'https://vendor.example.com/callback',
         ]);
 
     expect((float) $user->balanceFloat)->toBe(50.0)
@@ -59,6 +63,8 @@ it('fails face payment if user has insufficient balance', function () {
         'item_description' => 'Premium Coffee',
         'reference_id' => 'TXN-002',
         'selfie' => base64_encode('selfie'),
+        'currency' => 'PHP',
+        'callback_url' => 'https://vendor.example.com/too-low',
     ]);
 
     $response->assertStatus(402)
@@ -83,6 +89,8 @@ it('fails face payment if face verification throws an exception', function () {
         'item_description' => 'Lunch Combo',
         'reference_id' => 'TXN-003',
         'selfie' => base64_encode('bad-img'),
+        'currency' => 'PHP',
+        'callback_url' => 'https://vendor.example.com/failed-face',
     ]);
 
     $response->assertStatus(500)
@@ -106,6 +114,8 @@ it('dispatches TransferInitiated and saves metadata', function () {
         'item_description' => 'Dinner Box',
         'reference_id' => 'TXN-004',
         'selfie' => 'selfie-string',
+        'currency' => 'PHP',
+        'callback_url' => 'https://vendor.example.com/dinner-box',
     ]);
 
     $response->assertOk()
@@ -134,6 +144,8 @@ it('processes a refund after successful face payment', function () {
         'item_description' => 'Rice Bowl',
         'reference_id' => 'TXN-005',
         'selfie' => 'face-base64',
+        'currency' => 'PHP',
+        'callback_url' => 'https://vendor.example.com/rice-bowl',
     ]);
 
     $response->assertOk();
@@ -166,6 +178,8 @@ it('allows retry on face verification failure and succeeds on second try', funct
         'item_description' => 'Sizzling Plate',
         'reference_id' => 'TXN-006',
         'selfie' => 'fail-first',
+        'currency' => 'PHP',
+        'callback_url' => 'https://vendor.example.com/retry-success',
     ]);
 
     $failResponse->assertStatus(500)

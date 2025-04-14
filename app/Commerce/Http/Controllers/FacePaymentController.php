@@ -18,41 +18,48 @@ class FacePaymentController extends Controller
             'amount' => ['required', 'numeric', 'min:0.01'],
             'item_description' => ['required', 'string', 'max:255'],
             'reference_id' => ['nullable', 'string', 'max:100'],
-            'selfie' => ['required', 'string'], // base64 selfie
+            'currency' => ['nullable', 'string', 'size:3'], // e.g. PHP
+            'callback_url' => ['nullable', 'url'],
+            'selfie' => ['required', 'string'],
         ]);
 
         $vendor = Vendor::findOrFail($validated['vendor_id']);
         $amount = (float) $validated['amount'];
+        $currency = $validated['currency'] ?? 'PHP';
 
         try {
-            // 1. 🧠 Face Verification → Find user
+            // 🧠 Step 1: Face verification
             $user = app(FaceVerificationPipeline::class)->run($validated['selfie']);
 
-            // 2. 💰 Check balance
+            // 💰 Step 2: Check balance
             if ((float) $user->balanceFloat < $amount) {
                 return response()->json([
                     'message' => 'Insufficient balance.',
                 ], Response::HTTP_PAYMENT_REQUIRED);
             }
 
-            // 3. 💸 Transfer funds
+            // 💸 Step 3: Transfer
             $meta = [
                 'initiated_by' => 'face_login',
                 'transfer_type' => 'vendor_checkout',
                 'reason' => $validated['item_description'],
                 'reference_id' => $validated['reference_id'] ?? null,
+                'currency' => $currency,
+                'callback_url' => $validated['callback_url'] ?? null,
             ];
 
             $transfer = $transferService->transferUnconfirmed($user, $vendor, $amount, $meta);
             $transferService->confirmTransfer($transfer);
             $transferService->finalizeTransfer($transfer);
 
-            // 4. ✅ Response
+            // ✅ Step 4: Response
             return response()->json([
                 'message' => 'Payment successful',
                 'amount' => $amount,
+                'currency' => $currency,
                 'item_description' => $validated['item_description'],
                 'reference_id' => $validated['reference_id'] ?? null,
+                'callback_url' => $validated['callback_url'] ?? null,
                 'user_id' => $user->id,
                 'transfer_uuid' => $transfer->uuid,
             ]);
