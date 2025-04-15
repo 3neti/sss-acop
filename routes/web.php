@@ -29,4 +29,13 @@ Route::get('/test-image', [\App\Http\Controllers\TestController::class, 'showBas
 Route::get('/webhooks/hyperverge', HypervergeWebhookController::class)
     ->name('webhooks.hyperverge');
 
+Route::get('/commerce', [\App\Commerce\Http\Controllers\CommerceController::class, 'index'])->name('commerce.index');
+Route::get('/vendor/face-payment', function () {
+    return Inertia::render('Vendor/FacePaymentPage', [
+        'vendorId' => 1, //auth()->user()->id, // or however you resolve vendor
+        'currency' => 'PHP',
+        'callbackUrl' => null, // or some vendor config
+    ]);
+})->middleware(['auth'])->name('vendor.face.payment');
+
 require __DIR__.'/auth.php';

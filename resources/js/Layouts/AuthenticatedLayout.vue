@@ -39,6 +39,12 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Dashboard
                                 </NavLink>
+                                <NavLink
+                                    :href="route('vendor.face.payment')"
+                                    :active="route().current('vendor.face.payment')"
+                                >
+                                    Launch Face Payment
+                                </NavLink>
                             </div>
                         </div>
 

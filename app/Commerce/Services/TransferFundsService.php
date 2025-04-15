@@ -2,11 +2,11 @@
 
 namespace App\Commerce\Services;
 
+use Bavix\Wallet\Services\AtomicServiceInterface;
 use App\Commerce\Events\TransferFinalized;
 use App\Commerce\Events\TransferInitiated;
 use App\Commerce\Events\TransferRefunded;
 use Bavix\Wallet\Interfaces\Customer;
-use Illuminate\Support\Facades\DB;
 use Bavix\Wallet\Models\Transfer;
 use Illuminate\Support\Str;
 use Whitecube\Price\Price;
@@ -18,7 +18,10 @@ class TransferFundsService
     {
         $amount = $this->normalizeAmount($amount);
 
-        return DB::transaction(function () use ($from, $to, $amount, $meta): Transfer {
+        /** @var AtomicServiceInterface $atomic */
+        $atomic = app(AtomicServiceInterface::class);
+
+        return $atomic->blocks([$from->wallet, $to->wallet], function () use ($from, $to, $amount, $meta): Transfer {
             $withdraw = $from->withdrawFloat($amount, $meta, confirmed: false);
             $deposit = $to->depositFloat($amount, $meta, confirmed: false);
 
@@ -106,7 +109,6 @@ class TransferFundsService
     {
         ['from' => $from, 'to' => $to] = $this->resolveRefundParticipants($original);
 
-        // Ensure the refund amount is always positive
         $amount = abs($original->withdraw->amountFloat);
 
         $meta = array_merge($original->extra ?? [], [
@@ -122,7 +124,10 @@ class TransferFundsService
             'meta' => $meta,
         ]);
 
-        return DB::transaction(function () use ($from, $to, $amount, $meta, $original): ?Transfer {
+        /** @var AtomicServiceInterface $atomic */
+        $atomic = app(AtomicServiceInterface::class);
+
+        return $atomic->blocks([$from->wallet, $to->wallet], function () use ($from, $to, $amount, $meta, $original): ?Transfer {
             try {
                 dump([
                     'step' => 'before withdraw',
