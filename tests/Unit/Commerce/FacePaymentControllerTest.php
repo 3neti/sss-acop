@@ -1,5 +1,6 @@
 <?php
 
+use App\KYC\Exceptions\FacePhotoNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Commerce\Services\TransferFundsService;
 use App\KYC\Services\FaceVerificationPipeline;
@@ -189,6 +190,7 @@ test('returns 500 on unexpected exception', function () {
     $response->assertStatus(500)
         ->assertJsonFragment(['message' => 'Unable to complete payment.']);
 });
+
 
 test('completes face payment using id_number and id_type', function () {
     Config::set('sss-acop.identifiers', ['id_number', 'id_type']);

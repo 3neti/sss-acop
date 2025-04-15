@@ -80,7 +80,7 @@ it('returns true when resetTransferConfirm is successful', function () {
     expect($result)->toBeTrue();
 });
 
-it('returns false when resetTransferConfirm is called again after already reset', function () {
+it('returns true even if resetTransferConfirm is called again after already reset', function () {
     $user = User::factory()->create();
     $vendor = Vendor::factory()->create();
     $user->depositFloat(200);
@@ -92,10 +92,10 @@ it('returns false when resetTransferConfirm is called again after already reset'
     // First reset
     $vendor->resetTransferConfirm($transfer);
 
-    // This one should fail silently in safe mode
+    // Should still return true — resetConfirm is idempotent now
     $result = app(TransferFundsService::class)->isResetTransferConfirmSafe($transfer);
 
-    expect($result)->toBeFalse();
+    expect($result)->toBeTrue();
 });
 
 it('logs metadata on unconfirmed transfer', function () {
@@ -218,4 +218,36 @@ it('logs and dispatches TransferRefunded on refund', function () {
         return $event->uuid === $refund->uuid
             && $event->originalUuid === $transfer->uuid;
     });
+});
+
+it('aborts unconfirmed transfer and marks it with reason', function () {
+    $user = User::factory()->create();
+    $vendor = Vendor::factory()->create();
+
+    $user->depositFloat(500);
+
+    $service = new TransferFundsService();
+
+    $meta = ['reference_id' => 'TRX123'];
+
+    // Step 1: Create an unconfirmed transfer
+    $transfer = $service->transferUnconfirmed($user, $vendor, 200, $meta);
+
+    // Sanity check: still unconfirmed
+    expect($transfer->withdraw->confirmed)->toBeFalse()
+        ->and($transfer->deposit->confirmed)->toBeFalse();
+
+    // Step 2: Abort the transfer
+    $service->abortUnconfirmedTransfer($transfer, 'Face verification failed');
+
+    // Step 3: Reload and assert status and metadata
+    $transfer->refresh();
+
+    expect($transfer->status)->toBe(Transfer::STATUS_TRANSFER) // default fallback
+    ->and($transfer->extra['aborted_reason'])->toBe('Face verification failed')
+        ->and($transfer->extra)->toHaveKey('aborted_at');
+
+    // Step 4: Withdraw/Deposit records should no longer exist
+    expect($transfer->withdraw()->exists())->toBeFalse()
+        ->and($transfer->deposit()->exists())->toBeFalse();
 });

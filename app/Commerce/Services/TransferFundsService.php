@@ -66,8 +66,16 @@ class TransferFundsService
         $withdrawOwner = $transfer->withdraw->payable;
         $depositOwner = $transfer->deposit->payable;
 
-        $depositOwner->resetConfirm($transfer->deposit);
-        $withdrawOwner->resetConfirm($transfer->withdraw);
+        if ($transfer->deposit->confirmed) {
+            $depositOwner->resetConfirm($transfer->deposit);
+        }
+
+        if ($transfer->withdraw->confirmed) {
+            $withdrawOwner->resetConfirm($transfer->withdraw);
+        }
+//
+//        $depositOwner->resetConfirm($transfer->deposit);
+//        $withdrawOwner->resetConfirm($transfer->withdraw);
 
         return true;
     }
@@ -209,5 +217,22 @@ class TransferFundsService
         }
 
         return (float) $amount;
+    }
+
+    public function abortUnconfirmedTransfer(Transfer $transfer, string $reason = ''): void
+    {
+        if (! $transfer->deposit->confirmed && ! $transfer->withdraw->confirmed) {
+            $transfer->deposit->delete();
+            $transfer->withdraw->delete();
+            $transfer->update([
+                'status' => Transfer::STATUS_TRANSFER, //Transfer::STATUS_FAILED, // custom, or you can soft-delete
+                'extra' => array_merge($transfer->extra ?? [], [
+                    'aborted_reason' => $reason,
+                    'aborted_at' => now()->toISOString(),
+                ]),
+            ]);
+            // Optionally: delete transfer record too
+            // $transfer->delete();
+        }
     }
 }

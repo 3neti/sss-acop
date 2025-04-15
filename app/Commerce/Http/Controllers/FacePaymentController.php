@@ -2,16 +2,17 @@
 
 namespace App\Commerce\Http\Controllers;
 
-use App\Commerce\Models\Vendor;
+use App\KYC\Exceptions\FaceVerificationFailedException;
+use App\KYC\Exceptions\FacePhotoNotFoundException;
 use App\Commerce\Services\TransferFundsService;
-use App\Http\Controllers\Controller;
 use App\KYC\Services\FaceVerificationPipeline;
-use App\Models\User;
+use Illuminate\Support\Facades\{Log, Storage};
+use Symfony\Component\HttpFoundation\Response;
+use App\Http\Controllers\Controller;
+use App\Commerce\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\Response;
+use App\Models\User;
 use Exception;
 
 class FacePaymentController extends Controller
@@ -42,31 +43,47 @@ class FacePaymentController extends Controller
         $validated = $request->validate($rules);
 
         $vendor = Vendor::findOrFail($validated['vendor_id']);
-
         $currency = $validated['currency'] ?? 'PHP';
         $referenceId = $validated['reference_id'] ?? uniqid('face_', true);
         $amount = (float) $validated['amount'];
 
-        try {
-            $user = $this->findUser($validated);
+        $user = $this->findUser($validated);
+        if (! $user) {
+            return response()->json(['message' => 'User not found.'], Response::HTTP_NOT_FOUND);
+        }
 
-            if (! $user) {
-                return response()->json(['message' => 'User not found.'], Response::HTTP_NOT_FOUND);
-            }
+        $meta = [
+            'initiated_by' => 'face_login',
+            'transfer_type' => 'vendor_checkout',
+            'reason' => $validated['item_description'],
+            'reference_id' => $referenceId,
+            'currency' => $currency,
+            'callback_url' => $validated['callback_url'] ?? null,
+        ];
+
+        $transfer = null;
+        try {
 
             $media = $user->getFirstMedia('photo');
             if (! $media) {
-                return response()->json(['message' => 'No stored photo found for user.'], Response::HTTP_NOT_FOUND);
+                throw new FacePhotoNotFoundException;
             }
 
-            $storedImagePath = Storage::disk($media->disk)->path($media->getPathRelativeToRoot());
+            // Step 1: Ensure sufficient funds
+            if (! $user->hasSufficientBalance($amount)) {
+                return response()->json(['message' => 'Insufficient balance.'], Response::HTTP_PAYMENT_REQUIRED);
+            }
 
+            // Step 2: Reserve transfer (unconfirmed)
+            $transfer = $transferService->transferUnconfirmed($user, $vendor, $amount, $meta);
+
+            // Step 3: Face verification
+            $storedImagePath = Storage::disk($media->disk)->path($media->getPathRelativeToRoot());
             $result = app(FaceVerificationPipeline::class)->verify(
                 referenceCode: $referenceId,
                 base64img: $validated['selfie'],
                 storedImagePath: $storedImagePath
             );
-
             $match = Arr::get($result, 'result.details.match.value');
             $confidence = Arr::get($result, 'result.details.match.confidence');
             $action = Arr::get($result, 'result.summary.action');
@@ -81,33 +98,20 @@ class FacePaymentController extends Controller
             $confidenceScore = $confidenceMap[strtolower($confidence)] ?? 0;
 
             if ($match !== 'yes' || $action !== 'pass' || $confidenceScore < 85) {
-                return response()->json([
-                    'message' => 'Face verification failed.',
-                    'reason' => Arr::get($result, 'result.summary.details.0.message') ?? 'Unmatched face.',
-                ], Response::HTTP_FORBIDDEN);
+                $transferService->abortUnconfirmedTransfer($transfer, 'face_mismatch');
+                throw new FaceVerificationFailedException(
+                    reason: Arr::get($result, 'result.summary.details.0.message') ?? 'Unmatched face.'
+                );
             }
 
-            if (! $user->hasSufficientBalance($amount)) {
-                return response()->json(['message' => 'Insufficient balance.'], Response::HTTP_PAYMENT_REQUIRED);
-            }
-
-            $meta = [
-                'initiated_by' => 'face_login',
-                'transfer_type' => 'vendor_checkout',
-                'reason' => $validated['item_description'],
-                'reference_id' => $referenceId,
-                'currency' => $currency,
-                'callback_url' => $validated['callback_url'] ?? null,
-            ];
-
-            $transfer = $transferService->transferUnconfirmed($user, $vendor, $amount, $meta);
+            // Step 4: Confirm transfer (commit balance changes)
             $transferService->confirmTransfer($transfer);
 
             Log::info('[Debug] User Balance: ' . $user->fresh()->balanceFloat);
             Log::info('[Debug] Vendor Balance: ' . $vendor->fresh()->balanceFloat);
 
+            // Step 5 (optional): Finalize later (can be queued)
             $transferService->finalizeTransfer($transfer);
-
 
             return response()->json([
                 'message' => 'Payment successful',
@@ -119,7 +123,17 @@ class FacePaymentController extends Controller
                 'user_id' => $user->id,
                 'transfer_uuid' => $transfer->uuid,
             ]);
+        } catch (FacePhotoNotFoundException $e) {
+            return response()->json([
+                'message' => 'No stored photo found for user.',
+            ], Response::HTTP_NOT_FOUND);
+        } catch (FaceVerificationFailedException $e) {
+            return response()->json($e->toArray(), $e->getCode());
         } catch (Exception $e) {
+            if ($transfer) {
+                $transferService->rollbackTransfer($transfer);
+            }
+
             Log::error('[FacePayment] Error occurred', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
