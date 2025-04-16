@@ -88,7 +88,6 @@ test('vendor can complete face payment using bearer token', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Token Meal',
         'reference_id' => 'TXN-BEARER-01',

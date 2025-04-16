@@ -28,7 +28,7 @@ class FacePaymentController extends Controller
     public function __invoke(Request $request, TransferFundsService $transferService)
     {
         $rules = [
-            'vendor_id' => ['required', 'exists:users,id'],
+//            'vendor_id' => ['required', 'exists:users,id'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'item_description' => ['required', 'string', 'max:255'],
             'reference_id' => ['nullable', 'string', 'max:100'],
@@ -43,7 +43,13 @@ class FacePaymentController extends Controller
 
         $validated = $request->validate($rules);
 
-        $vendor = Vendor::findOrFail($validated['vendor_id']);
+//        $vendor = Vendor::findOrFail($validated['vendor_id']);
+        /** @var \App\Commerce\Models\Vendor $vendor */
+        $vendor = $request->user();
+
+//        if (! $vendor instanceof Vendor) {
+//            return $this->respondWith($request, 'Unauthorized vendor.', Response::HTTP_UNAUTHORIZED);
+//        }
         $currency = $validated['currency'] ?? 'PHP';
         $referenceId = $validated['reference_id'] ?? uniqid('face_', true);
         $amount = (float) $validated['amount'];

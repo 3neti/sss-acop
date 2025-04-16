@@ -3,7 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useForm } from '@inertiajs/vue3'
 
 const props = defineProps({
-    vendorId: Number,
+    // vendorId: Number,
     reference_id: String,
     item_description: String,
     amount: Number,
@@ -33,7 +33,7 @@ const showRetry = ref(false)
 const timeoutId = ref(null)
 
 const form = useForm({
-    vendor_id: props.vendorId,
+    // vendor_id: props.vendorId,
     reference_id: props.reference_id,
     item_description: props.item_description,
     amount: props.amount,

@@ -14,5 +14,7 @@ class VendorSeeder extends Seeder
     public function run(): void
     {
         $vendor = Vendor::factory()->create();
+        $token = $vendor->createToken('vendor-api')->plainTextToken;
+        echo $token;
     }
 }

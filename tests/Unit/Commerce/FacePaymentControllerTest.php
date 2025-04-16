@@ -44,7 +44,7 @@ test('completes face payment successfully', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Regular Meal',
         'reference_id' => 'TXN-001',
@@ -71,7 +71,7 @@ test('returns 404 when user is not found', function () {
     $token = $vendor->createToken('vendor-api')->plainTextToken;
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 100,
         'item_description' => 'Item X',
         'id_number' => 'N/A',
@@ -94,7 +94,7 @@ test('returns 404 when photo is missing', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 100,
         'item_description' => 'Item X',
         'id_number' => 'ZZZ999',
@@ -126,7 +126,7 @@ test('returns 402 when user has insufficient balance', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 200,
         'item_description' => 'Item Y',
         'id_number' => 'XYZ456',
@@ -159,7 +159,7 @@ test('returns 403 when face does not match', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 300,
         'item_description' => 'Unverified Purchase',
         'id_number' => 'LMN123',
@@ -186,7 +186,7 @@ test('returns 500 on unexpected exception', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 300,
         'item_description' => 'System Crash Test',
         'id_number' => 'BUG123',
@@ -220,7 +220,7 @@ test('completes face payment using id_number and id_type', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Regular Meal',
         'reference_id' => 'TXN-001',
@@ -263,7 +263,7 @@ test('completes face payment using email', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Email Pay',
         'email' => 'john@example.com',
@@ -295,7 +295,7 @@ test('completes face payment using mobile', function () {
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
     $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Mobile Pay',
         'mobile' => '09171234567',
@@ -321,7 +321,7 @@ test('ensures wallet balances are synced after transfer', function () {
     ])->getMock());
 
     $this->withToken($token)->postJson(route('face.payment'), [
-        'vendor_id' => $vendor->id,
+//        'vendor_id' => $vendor->id,
         'amount' => 200,
         'item_description' => 'Balance Sync Test',
         'id_number' => 'SYNC123',
@@ -334,4 +334,20 @@ test('ensures wallet balances are synced after transfer', function () {
 
     expect((float) $user->balanceFloat)->toBe(100.0)
         ->and((float) $vendor->balanceFloat)->toBe(200.0);
+});
+
+test('non-vendor user cannot access face payment route', function () {
+    $user = User::factory()->create(); // Not a Vendor
+    $token = $user->createToken('user-api')->plainTextToken;
+
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
+        'amount' => 100,
+        'item_description' => 'Blocked Access',
+        'id_number' => 'ABC123',
+        'id_type' => 'phl_umid',
+        'selfie' => 'base64image',
+    ]);
+
+    $response->assertUnauthorized()
+        ->assertJsonFragment(['message' => 'Unauthorized vendor.']);
 });

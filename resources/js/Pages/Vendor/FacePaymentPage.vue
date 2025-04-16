@@ -4,7 +4,7 @@ import { usePage } from '@inertiajs/vue3';
 import { watch } from 'vue';
 
 const props = defineProps({
-    vendorId: Number,
+    // vendorId: Number,
     reference_id: String,
     item_description: String,
     amount: Number,

@@ -8,3 +8,6 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::post('/face-payment', FacePaymentController::class)
+    ->middleware(['auth:sanctum', 'vendor'])
+    ->name('face.payment');
