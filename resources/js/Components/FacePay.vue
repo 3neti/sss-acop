@@ -4,9 +4,20 @@ import { useForm } from '@inertiajs/vue3'
 
 const props = defineProps({
     vendorId: Number,
+    reference_id: String,
+    item_description: String,
+    amount: Number,
     currency: {
         type: String,
         default: 'PHP',
+    },
+    id_type: {
+        type: String,
+        default: '',
+    },
+    id_number: {
+        type: String,
+        default: '',
     },
     callbackUrl: {
         type: String,
@@ -23,13 +34,13 @@ const timeoutId = ref(null)
 
 const form = useForm({
     vendor_id: props.vendorId,
-    amount: 200,
-    item_description: 'Test Product',
-    reference_id: 'AA537',
+    reference_id: props.reference_id,
+    item_description: props.item_description,
+    amount: props.amount,
     callback_url: props.callbackUrl,
     currency: props.currency,
-    id_type: 'phl_dl',
-    id_number: 'N01-87-049586',
+    id_type: props.id_type,
+    id_number: props.id_number,
     selfie: '',
 })
 

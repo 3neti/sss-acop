@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use App\Models\User;
 use Exception;
+use App\Commerce\Jobs\NotifyCallbackJob;
 
 class FacePaymentController extends Controller
 {
@@ -49,7 +50,7 @@ class FacePaymentController extends Controller
 
         $user = $this->findUser($validated);
         if (! $user) {
-            return response()->json(['message' => 'User not found.'], Response::HTTP_NOT_FOUND);
+            return $this->respondWith($request, 'User not found.', Response::HTTP_NOT_FOUND);
         }
 
         $meta = [
@@ -63,27 +64,24 @@ class FacePaymentController extends Controller
 
         $transfer = null;
         try {
-
             $media = $user->getFirstMedia('photo');
             if (! $media) {
                 throw new FacePhotoNotFoundException;
             }
 
-            // Step 1: Ensure sufficient funds
             if (! $user->hasSufficientBalance($amount)) {
-                return response()->json(['message' => 'Insufficient balance.'], Response::HTTP_PAYMENT_REQUIRED);
+                return $this->respondWith($request, 'Insufficient balance.', Response::HTTP_PAYMENT_REQUIRED);
             }
 
-            // Step 2: Reserve transfer (unconfirmed)
             $transfer = $transferService->transferUnconfirmed($user, $vendor, $amount, $meta);
 
-            // Step 3: Face verification
             $storedImagePath = Storage::disk($media->disk)->path($media->getPathRelativeToRoot());
             $result = app(FaceVerificationPipeline::class)->verify(
                 referenceCode: $referenceId,
                 base64img: $validated['selfie'],
                 storedImagePath: $storedImagePath
             );
+
             $match = Arr::get($result, 'result.details.match.value');
             $confidence = Arr::get($result, 'result.details.match.confidence');
             $action = Arr::get($result, 'result.summary.action');
@@ -104,16 +102,14 @@ class FacePaymentController extends Controller
                 );
             }
 
-            // Step 4: Confirm transfer (commit balance changes)
             $transferService->confirmTransfer($transfer);
 
             Log::info('[Debug] User Balance: ' . $user->fresh()->balanceFloat);
             Log::info('[Debug] Vendor Balance: ' . $vendor->fresh()->balanceFloat);
 
-            // Step 5 (optional): Finalize later (can be queued)
             $transferService->finalizeTransfer($transfer);
 
-            return response()->json([
+            $responseData = [
                 'message' => 'Payment successful',
                 'amount' => $amount,
                 'currency' => $currency,
@@ -122,14 +118,31 @@ class FacePaymentController extends Controller
                 'callback_url' => $validated['callback_url'] ?? null,
                 'user_id' => $user->id,
                 'transfer_uuid' => $transfer->uuid,
+            ];
+
+            if ($request->expectsJson()) {
+                return response()->json($responseData);
+            }
+
+            if ($callbackUrl = $responseData['callback_url']) {
+                dispatch(new NotifyCallbackJob($callbackUrl, $responseData));
+                return redirect()->route('face.payment.success')->with('event', [
+                    'name' => 'payment_successful',
+                    'data' => $responseData,
+                ]);
+            }
+
+            return back()->with('event', [
+                'name' => 'payment_successful',
+                'data' => $responseData
             ]);
+
         } catch (FacePhotoNotFoundException $e) {
-            return response()->json([
-                'message' => 'No stored photo found for user.',
-            ], Response::HTTP_NOT_FOUND);
+            return $this->respondWith($request, 'No stored photo found for user.', Response::HTTP_NOT_FOUND);
         } catch (FaceVerificationFailedException $e) {
-            return response()->json($e->toArray(), $e->getCode());
-        } catch (Exception $e) {
+            return $this->respondWith($request, $e->toArray(), $e->getCode());
+        }
+        catch (Exception $e) {
             if ($transfer) {
                 $transferService->rollbackTransfer($transfer);
             }
@@ -139,10 +152,7 @@ class FacePaymentController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return response()->json([
-                'message' => 'Unable to complete payment.',
-                'error' => $e->getMessage(),
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->respondWith($request, 'Unable to complete payment.', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -157,5 +167,16 @@ class FacePaymentController extends Controller
 
         Log::warning('[FacePayment] No valid user identifier provided');
         return null;
+    }
+
+    protected function respondWith(Request $request, string|array $payload, int $status = 400)
+    {
+        $data = is_array($payload) ? $payload : ['message' => $payload];
+
+        if ($request->expectsJson()) {
+            return response()->json($data, $status);
+        }
+
+        return back()->withInput()->withErrors($data);
     }
 }
