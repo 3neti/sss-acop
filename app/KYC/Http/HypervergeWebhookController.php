@@ -38,6 +38,9 @@ class HypervergeWebhookController extends Controller
             $validated['status']
         );
 
-        return response()->json(['message' => 'Webhook received.'], 200);
+        // ✅ Store for polling from frontend
+        cache()->put("kyc_status_{$validated['transactionId']}", $validated['status'], now()->addMinutes(10));
+
+        return inertia()->location(route('onboarding.status', ['transactionId' => $validated['transactionId']]));
     }
 }
