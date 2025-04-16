@@ -2,40 +2,22 @@
 
 namespace App\Commerce\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Bavix\Wallet\Traits\{CanConfirm, CanPayFloat, HasWalletFloat};
-use Bavix\Wallet\Interfaces\{Confirmable, Customer, WalletFloat};
-use App\Commerce\Traits\CanTransferUnconfirmed;
-use Illuminate\Database\Eloquent\Model;
-use Database\Factories\VendorFactory;
+use Database\Factories\UserFactory;
+use Parental\HasParent;
+use App\Models\User;
 
-class Vendor extends Model implements WalletFloat, Customer, Confirmable
+class Vendor extends User
 {
-    use CanConfirm, CanPayFloat, HasWalletFloat;
-    use CanTransferUnconfirmed;
-    use HasFactory;
+    use HasParent;
 
-    protected $fillable = [
-        'name',
-        'email',
-        'mobile',
-    ];
-
-    protected static function newFactory(): VendorFactory
+    protected static function newFactory()
     {
-        return VendorFactory::new();
+        return UserFactory::new()->state([
+            'type' => 'vendor',
+        ]);
     }
 
-    public function balance(): float
-    {
-        return $this->balanceFloat;
-    }
-
-    public function hasSufficientBalance(float $amount): bool
-    {
-        return $this->balanceFloat >= $amount;
-    }
-
+    /** @deprecated  */
     public function withdrawAmount(float $amount): bool
     {
         if (! $this->hasSufficientBalance($amount)) {
@@ -44,20 +26,5 @@ class Vendor extends Model implements WalletFloat, Customer, Confirmable
 
         $this->withdrawFloat($amount);
         return true;
-    }
-
-    public function transferTo(Customer $recipient, float $amount): bool
-    {
-        if (! $this->hasSufficientBalance($amount)) {
-            return false;
-        }
-
-        $this->transferFloat($recipient, $amount);
-        return true;
-    }
-
-    public function refundTo(Customer $user, float $amount): bool
-    {
-        return $this->transferTo($user, $amount);
     }
 }

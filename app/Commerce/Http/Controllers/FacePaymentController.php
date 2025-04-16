@@ -28,7 +28,7 @@ class FacePaymentController extends Controller
     public function __invoke(Request $request, TransferFundsService $transferService)
     {
         $rules = [
-            'vendor_id' => ['required', 'exists:vendors,id'],
+            'vendor_id' => ['required', 'exists:users,id'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'item_description' => ['required', 'string', 'max:255'],
             'reference_id' => ['nullable', 'string', 'max:100'],

@@ -27,6 +27,7 @@ function attachUserPhoto(User $user): void {
 
 test('completes face payment successfully', function () {
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['id_number' => 'ABC123', 'id_type' => 'phl_umid']);
     $user->depositFloat(300);
     attachUserPhoto($user);
@@ -42,7 +43,7 @@ test('completes face payment successfully', function () {
     ]);
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Regular Meal',
@@ -67,8 +68,9 @@ test('completes face payment successfully', function () {
 
 test('returns 404 when user is not found', function () {
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 100,
         'item_description' => 'Item X',
@@ -83,6 +85,7 @@ test('returns 404 when user is not found', function () {
 
 test('returns 404 when photo is missing', function () {
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['id_number' => 'ZZZ999', 'id_type' => 'phl_umid']);
     $user->depositFloat(300); // no photo
 
@@ -90,7 +93,7 @@ test('returns 404 when photo is missing', function () {
     $mockPipeline->shouldNotReceive('verify');
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 100,
         'item_description' => 'Item X',
@@ -105,6 +108,8 @@ test('returns 404 when photo is missing', function () {
 
 test('returns 402 when user has insufficient balance', function () {
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
+
     $user = User::factory()->create(['id_number' => 'XYZ456', 'id_type' => 'phl_umid']);
     $user->depositFloat(50);
     attachUserPhoto($user);
@@ -120,7 +125,7 @@ test('returns 402 when user has insufficient balance', function () {
     ]);
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 200,
         'item_description' => 'Item Y',
@@ -134,6 +139,7 @@ test('returns 402 when user has insufficient balance', function () {
 
 test('returns 403 when face does not match', function () {
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['id_number' => 'LMN123', 'id_type' => 'phl_umid']);
     $user->depositFloat(500);
     attachUserPhoto($user);
@@ -152,7 +158,7 @@ test('returns 403 when face does not match', function () {
     ]);
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 300,
         'item_description' => 'Unverified Purchase',
@@ -170,6 +176,7 @@ test('returns 403 when face does not match', function () {
 
 test('returns 500 on unexpected exception', function () {
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['id_number' => 'BUG123', 'id_type' => 'phl_umid']);
     $user->depositFloat(500);
     attachUserPhoto($user);
@@ -178,7 +185,7 @@ test('returns 500 on unexpected exception', function () {
     $mockPipeline->shouldReceive('verify')->andThrow(new Exception('Unexpected error'));
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 300,
         'item_description' => 'System Crash Test',
@@ -196,6 +203,7 @@ test('completes face payment using id_number and id_type', function () {
     Config::set('sss-acop.identifiers', ['id_number', 'id_type']);
 
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['id_number' => 'ABC123', 'id_type' => 'phl_umid']);
     $user->depositFloat(300);
     attachUserPhoto($user);
@@ -211,7 +219,7 @@ test('completes face payment using id_number and id_type', function () {
     ]);
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Regular Meal',
@@ -238,6 +246,7 @@ test('completes face payment using email', function () {
     Config::set('sss-acop.identifiers', ['email']);
 
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['email' => 'john@example.com']);
     $user->depositFloat(300);
     attachUserPhoto($user);
@@ -253,7 +262,7 @@ test('completes face payment using email', function () {
     ]);
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Email Pay',
@@ -269,6 +278,7 @@ test('completes face payment using mobile', function () {
     Config::set('sss-acop.identifiers', ['mobile']);
 
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['mobile' => '09171234567']);
     $user->depositFloat(300);
     attachUserPhoto($user);
@@ -284,7 +294,7 @@ test('completes face payment using mobile', function () {
     ]);
     app()->instance(FaceVerificationPipeline::class, $mockPipeline);
 
-    $response = $this->postJson(route('face.payment'), [
+    $response = $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 250,
         'item_description' => 'Mobile Pay',
@@ -298,6 +308,7 @@ test('completes face payment using mobile', function () {
 
 test('ensures wallet balances are synced after transfer', function () {
     $vendor = Vendor::factory()->create();
+    $token = $vendor->createToken('vendor-api')->plainTextToken;
     $user = User::factory()->create(['id_number' => 'SYNC123', 'id_type' => 'phl_umid']);
     $user->depositFloat(300);
     attachUserPhoto($user);
@@ -309,7 +320,7 @@ test('ensures wallet balances are synced after transfer', function () {
         ]
     ])->getMock());
 
-    $this->postJson(route('face.payment'), [
+    $this->withToken($token)->postJson(route('face.payment'), [
         'vendor_id' => $vendor->id,
         'amount' => 200,
         'item_description' => 'Balance Sync Test',
