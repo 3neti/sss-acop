@@ -22,6 +22,7 @@ const form = useForm({
     _method: 'PATCH',
     name: user.name,
     email: user.email,
+    mobile: user.mobile,
     photo: null, // added
 });
 
@@ -70,6 +71,17 @@ const capture = () => {
 
 onBeforeUnmount(() => stopCamera());
 
+const nameInput = ref(null)
+const emailInput = ref(null)
+
+onMounted(() => {
+    if (!form.email) {
+        emailInput.value?.focus()
+    } else {
+        nameInput.value?.focus()
+    }
+})
+
 </script>
 
 <template>
@@ -102,7 +114,7 @@ onBeforeUnmount(() => stopCamera());
                     class="mt-1 block w-full"
                     v-model="form.name"
                     required
-                    autofocus
+                    ref="nameInput"
                     autocomplete="name"
                 />
 
@@ -118,10 +130,26 @@ onBeforeUnmount(() => stopCamera());
                     class="mt-1 block w-full"
                     v-model="form.email"
                     required
+                    ref="emailInput"
                     autocomplete="username"
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <div>
+                <InputLabel for="mobile" value="Mobile" />
+
+                <TextInput
+                    id="mobile"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.mobile"
+                    required
+                    autocomplete="mobile"
+                />
+
+                <InputError class="mt-2" :message="form.errors.mobile" />
             </div>
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">

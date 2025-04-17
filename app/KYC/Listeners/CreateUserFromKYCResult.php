@@ -33,8 +33,14 @@ class CreateUserFromKYCResult
                 'id_type' => $parsed->idType(),
                 'country' => $parsed->country(),
                 'email' => null,
+                'type' => 'vendor',
             ]
         );
+
+        // Force upgrade if type was not previously set
+        if ($user->type !== 'vendor') {
+            $user->update(['type' => 'vendor']);
+        }
 
         if ($parsed->photo()) {
             $user->addMediaFromUrl($parsed->photo())

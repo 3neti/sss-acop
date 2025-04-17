@@ -19,7 +19,6 @@ const checkStatus = async () => {
 
         if (status.value === 'auto_approved') {
             clearInterval(interval.value)
-            // router.visit(route('profile.edit'))
             router.visit(route('onboarding.redirect', props.transactionId))
         } else if (status.value === 'user_cancelled') {
             clearInterval(interval.value)
@@ -48,7 +47,7 @@ onBeforeUnmount(() => {
 
         <div class="p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl text-center max-w-md w-full">
             <h1 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">
-                Verifying Your Identity
+                Extracting Your Credentials
             </h1>
 
             <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
