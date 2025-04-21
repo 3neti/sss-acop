@@ -52,6 +52,8 @@ class CreateUserFromKYCResult
         Log::info('[CreateUserFromKYCResult] User created from KYC result', [
             'transactionId' => $event->transactionId,
             'user_id' => $user->id,
+            'data' => $event->data,
+            'payload' => $parsed->toArray(),
         ]);
     }
 }

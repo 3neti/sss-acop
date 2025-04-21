@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withCommands([
         __DIR__.'/../app/KYC/Commands',
+        __DIR__.'/../app/Commerce/Console/Commands',
     ])
     ->withExceptions(function (Exceptions $exceptions) {
 //        $exceptions->respond(function (FacePhotoNotFoundException $e) {

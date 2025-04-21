@@ -6,6 +6,7 @@ enum HypervergeDocument: string
 {
     case DL = 'dl'; // Driver’s License
     case UMID = 'umid'; // Unified Multi-purpose ID
+    case SYS = 'sys'; //PhilSYS
 
 
     public function label(): string
@@ -13,6 +14,7 @@ enum HypervergeDocument: string
         return match ($this) {
             self::DL => 'Driver\'s License',
             self::UMID => 'UMID Card',
+            self::SYS => 'Philippine ID',
         };
     }
 

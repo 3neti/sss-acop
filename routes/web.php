@@ -36,13 +36,13 @@ Route::get('/webhooks/hyperverge', HypervergeWebhookController::class)
 Route::get('/commerce', [\App\Commerce\Http\Controllers\CommerceController::class, 'index'])->name('commerce.index');
 Route::get('/vendor/face-payment', function () {
     return Inertia::render('Vendor/FacePaymentPage', [
-//        'vendorId' => 2, //auth()->user()->id, // or however you resolve vendor
+//        'vendorId' => 1, //auth()->user()->id, // or however you resolve vendor
         'reference_id' => 'AA537',
         'item_description' => 'X Factor',
         'amount' => 250,
         'currency' => 'PHP',
-        'id_type' => 'phl_dl',
-        'id_number' => 'N01-87-049586',
+        'id_type' => 'philsys',
+        'id_number' => '6302-5389-1879-5682',
         'callbackUrl' => 'https://run.mocky.io/v3/826def70-ea2c-413b-98eb-1761799c552a', // or some vendor config
     ]);
 })->middleware(['auth:sanctum', 'email'])->name('vendor.face.payment');

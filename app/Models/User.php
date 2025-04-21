@@ -7,10 +7,10 @@ use Bavix\Wallet\Interfaces\{Confirmable, Customer, WalletFloat};
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Commerce\Traits\CanTransferUnconfirmed;
+use App\Commerce\Models\{System, Vendor};
 use Illuminate\Notifications\Notifiable;
 use App\KYC\Contracts\KYCUserInterface;
 use Laravel\Sanctum\HasApiTokens;
-use App\Commerce\Models\Vendor;
 use App\KYC\Traits\HasKYCUser;
 use Parental\HasChildren;
 
@@ -64,6 +64,7 @@ class User extends Authenticatable implements KYCUserInterface, Customer, Wallet
         'admin' => Admin::class,
         'guest' => Guest::class,
         'vendor' => Vendor::class,
+        'system' => System::class
     ];
 
     public function balance(): float
@@ -89,5 +90,12 @@ class User extends Authenticatable implements KYCUserInterface, Customer, Wallet
     public function refundTo(Customer $user, float $amount): bool
     {
         return $this->transferTo($user, $amount);
+    }
+
+    public static function systemUser(): self
+    {
+        return static::where('id_type', config('sss-acop.system.user.id_type'))
+            ->where('id_number', config('sss-acop.system.user.id_number'))
+            ->firstOrFail();
     }
 }

@@ -91,6 +91,7 @@ class FetchKYCResult
                     Log::critical('[FetchKYCResult] Unexpected Error', [
                         'transactionId' => $transactionId,
                         'message' => $e->getMessage(),
+                        'payload' => $response->json(),
                     ]);
 
                     event(new KYCResultFailed($transactionId, ['exception' => $e->getMessage()]));
