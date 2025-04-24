@@ -5,6 +5,7 @@ import { watch } from 'vue';
 
 const props = defineProps({
     // vendorId: Number,
+    voucher_code: String,
     reference_id: String,
     item_description: String,
     amount: Number,
@@ -44,7 +45,8 @@ watch(
 <template>
     <div class="min-h-screen bg-gray-100 flex items-center justify-center">
         <FacePay
-            :vendor-id="vendorId"
+            :voucher_code="voucher_code"
+            vendor-id="vendorId"
             :reference_id="reference_id"
             :item_description="item_description"
             :amount="amount"

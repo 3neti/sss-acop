@@ -2,73 +2,57 @@
 
 namespace App\Commerce\Http\Controllers;
 
+use App\Commerce\Exceptions\InsufficientFunds;
+use App\Commerce\Exceptions\UnauthorizedVendor;
 use App\KYC\Exceptions\FaceVerificationFailedException;
 use App\KYC\Exceptions\FacePhotoNotFoundException;
 use App\Commerce\Services\TransferFundsService;
 use App\KYC\Services\FaceVerificationPipeline;
 use Illuminate\Support\Facades\{Log, Storage};
 use Symfony\Component\HttpFoundation\Response;
+use App\Commerce\Models\{Order, Vendor};
+use App\Commerce\Jobs\NotifyCallbackJob;
+use FrittenKeeZ\Vouchers\Models\Voucher;
 use App\Http\Controllers\Controller;
-use App\Commerce\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use App\Models\User;
+use Spatie\Url\Url;
 use Exception;
-use App\Commerce\Jobs\NotifyCallbackJob;
 
 class FacePaymentController extends Controller
 {
-    protected array $fields;
-
-    public function __construct()
-    {
-        $this->fields = config('sss-acop.identifiers', ['id_number', 'id_type']);
-    }
-
     public function __invoke(Request $request, TransferFundsService $transferService)
     {
-        $rules = [
-//            'vendor_id' => ['required', 'exists:users,id'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'item_description' => ['required', 'string', 'max:255'],
-            'reference_id' => ['nullable', 'string', 'max:100'],
-            'currency' => ['nullable', 'string', 'size:3'],
-            'callback_url' => ['nullable', 'url'],
+        $validated = $request->validate([
+            'voucher_code' => ['required', 'string'],
             'selfie' => ['required', 'string'],
-        ];
+        ]);
 
-        foreach ($this->fields as $field) {
-            $rules[$field] = config("sss-acop.field_rules.$field", ['required', 'string']);
-        }
+        $voucher = Voucher::where('code', $validated['voucher_code'])->firstOrFail();
+        $order = $voucher->getEntities(Order::class)->firstOrFail();
+        $vendor = $voucher->owner;
 
-        $validated = $request->validate($rules);
-
-//        $vendor = Vendor::findOrFail($validated['vendor_id']);
-        /** @var \App\Commerce\Models\Vendor $vendor */
-        $vendor = $request->user();
-
-//        if (! $vendor instanceof Vendor) {
-//            return $this->respondWith($request, 'Unauthorized vendor.', Response::HTTP_UNAUTHORIZED);
-//        }
-        $currency = $validated['currency'] ?? 'PHP';
-        $referenceId = $validated['reference_id'] ?? uniqid('face_', true);
-        $amount = (float) $validated['amount'];
-
-        $user = $this->findUser($validated);
-        if (! $user) {
-            return $this->respondWith($request, 'User not found.', Response::HTTP_NOT_FOUND);
-        }
+        $currency = $order->currency;
+        $referenceId = $order->reference_id;
+        $amount = (float) $order->amount;
+;
+        $user = User::where([
+            'id_type' => $order->meta['id_type'] ?? null,
+            'id_number' => $order->meta['id_number'] ?? null,
+        ])->firstOrFail();
 
         $meta = [
             'initiated_by' => 'face_login',
             'transfer_type' => 'vendor_checkout',
-            'reason' => $validated['item_description'],
+            'reason' => $order->meta['item_description'],
             'reference_id' => $referenceId,
             'currency' => $currency,
-            'callback_url' => $validated['callback_url'] ?? null,
+            'callback_url' => $order->callback_url ?? null,
         ];
 
         $transfer = null;
+
         try {
             $media = $user->getFirstMedia('photo');
             if (! $media) {
@@ -76,7 +60,8 @@ class FacePaymentController extends Controller
             }
 
             if (! $user->hasSufficientBalance($amount)) {
-                return $this->respondWith($request, 'Insufficient balance.', Response::HTTP_PAYMENT_REQUIRED);
+                throw new InsufficientFunds('Insufficient balance.');
+//                return $this->respondWith($request, 'Insufficient balance.', Response::HTTP_PAYMENT_REQUIRED);
             }
 
             $transfer = $transferService->transferUnconfirmed($user, $vendor, $amount, $meta);
@@ -109,46 +94,25 @@ class FacePaymentController extends Controller
             }
 
             $transferService->confirmTransfer($transfer);
-
-            Log::info('[Debug] User Balance: ' . $user->fresh()->balanceFloat);
-            Log::info('[Debug] Vendor Balance: ' . $vendor->fresh()->balanceFloat);
-
             $transferService->finalizeTransfer($transfer);
 
-            $responseData = [
-                'message' => 'Payment successful',
-                'amount' => $amount,
-                'currency' => $currency,
-                'item_description' => $validated['item_description'],
-                'reference_id' => $referenceId,
-                'callback_url' => $validated['callback_url'] ?? null,
-                'user_id' => $user->id,
-                'transfer_uuid' => $transfer->uuid,
-            ];
+            $callbackUrl = $order->callback_url;
 
-            if ($request->expectsJson()) {
-                return response()->json($responseData);
-            }
+            $url = Url::fromString($callbackUrl);
 
-            if ($callbackUrl = $responseData['callback_url']) {
-                dispatch(new NotifyCallbackJob($callbackUrl, $responseData));
-                return redirect()->route('face.payment.success')->with('event', [
-                    'name' => 'payment_successful',
-                    'data' => $responseData,
-                ]);
-            }
+            return $callbackUrl
+                ? inertia()->location($url->withQueryParameters(['reference_id' => $referenceId, 'status' => 'ayus'])->__toString())
+                : redirect()->route('face.payment.success');
 
-            return back()->with('event', [
-                'name' => 'payment_successful',
-                'data' => $responseData
-            ]);
-
+        } catch (UnauthorizedVendor $e) {
+            abort(Response::HTTP_UNAUTHORIZED, $e->getMessage());
         } catch (FacePhotoNotFoundException $e) {
-            return $this->respondWith($request, 'No stored photo found for user.', Response::HTTP_NOT_FOUND);
+            abort(Response::HTTP_NOT_FOUND, $e->getMessage());
         } catch (FaceVerificationFailedException $e) {
-            return $this->respondWith($request, $e->toArray(), $e->getCode());
-        }
-        catch (Exception $e) {
+            abort($e->getCode(), $e->getMessage());
+        } catch (InsufficientFunds $e) {
+            abort(Response::HTTP_PAYMENT_REQUIRED, $e->getMessage());
+        } catch (Exception $e) {
             if ($transfer) {
                 $transferService->rollbackTransfer($transfer);
             }
@@ -158,21 +122,8 @@ class FacePaymentController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->respondWith($request, 'Unable to complete payment.', Response::HTTP_INTERNAL_SERVER_ERROR);
+            abort(Response::HTTP_INTERNAL_SERVER_ERROR, $e->getMessage());
         }
-    }
-
-    protected function findUser(array $validated): ?User
-    {
-        $conditions = Arr::only($validated, $this->fields);
-
-        if (! empty($conditions)) {
-            Log::info('[FacePayment] Resolving user', $conditions);
-            return User::where($conditions)->first();
-        }
-
-        Log::warning('[FacePayment] No valid user identifier provided');
-        return null;
     }
 
     protected function respondWith(Request $request, string|array $payload, int $status = 400)

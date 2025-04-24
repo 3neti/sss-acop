@@ -4,6 +4,7 @@ import { useForm } from '@inertiajs/vue3'
 
 const props = defineProps({
     // vendorId: Number,
+    voucher_code: String,
     reference_id: String,
     item_description: String,
     amount: Number,
@@ -34,6 +35,7 @@ const timeoutId = ref(null)
 
 const form = useForm({
     // vendor_id: props.vendorId,
+    voucher_code: props.voucher_code,
     reference_id: props.reference_id,
     item_description: props.item_description,
     amount: props.amount,
@@ -112,7 +114,7 @@ onBeforeUnmount(() => {
 <template>
     <div class="bg-white shadow-md p-6 rounded-lg w-full max-w-md mx-auto space-y-4">
         <h2 class="text-xl font-bold text-gray-800">💳 Face Payment Checkout</h2>
-
+        {{ form.voucher_code }}
         <form @submit.prevent="submit" class="space-y-4">
             <div>
                 <label class="block text-sm text-gray-600">Amount ({{ currency }})</label>

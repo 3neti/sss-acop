@@ -1,13 +1,19 @@
 <?php
 
 use App\Commerce\Http\Controllers\FacePaymentController;
+use App\Commerce\Models\Order;
+use App\Commerce\Models\Vendor;
 use App\KYC\Http\CompleteOnboardingController;
 use App\KYC\Http\HypervergeWebhookController;
 use App\KYC\Http\Auth\FaceOnboardController;
 use App\Http\Controllers\ProfileController;
+use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 
 Route::get('/', function () {
@@ -34,18 +40,38 @@ Route::get('/webhooks/hyperverge', HypervergeWebhookController::class)
     ->name('webhooks.hyperverge');
 
 Route::get('/commerce', [\App\Commerce\Http\Controllers\CommerceController::class, 'index'])->name('commerce.index');
-Route::get('/vendor/face-payment', function () {
+
+Route::get('/vendor/face-payment/{voucher_code}', function (string $voucher_code) {
+    $voucher = Voucher::where('code', $voucher_code)->first();
+
+    if (! $voucher) {
+        throw new NotFoundHttpException('Voucher not found.');
+    }
+
+    $order = $voucher->getEntities(Order::class)->first();
+
+    if (! $order) {
+        throw new NotFoundHttpException('Associated order not found.');
+    }
+
+    // Optional vendor check
+    $vendor = $voucher->owner;
+
+//    if (Auth::check() && (Auth::user() instanceof Vendor)) && ! $voucher->owner->is(Auth::user() {
+//        throw new AccessDeniedHttpException('Unauthorized access to this voucher.');
+//    }
+
     return Inertia::render('Vendor/FacePaymentPage', [
-//        'vendorId' => 1, //auth()->user()->id, // or however you resolve vendor
-        'reference_id' => 'AA537',
-        'item_description' => 'X Factor',
-        'amount' => 250,
-        'currency' => 'PHP',
-        'id_type' => 'philsys',
-        'id_number' => '6302-5389-1879-5682',
-        'callbackUrl' => 'https://run.mocky.io/v3/826def70-ea2c-413b-98eb-1761799c552a', // or some vendor config
+        'voucher_code' => $voucher_code,
+        'reference_id' => $order->reference_id,
+        'item_description' => $order->meta['item_description'] ?? '',
+        'amount' => $order->amount,
+        'currency' => $order->currency,
+        'id_type' => $order->meta['id_type'] ?? '',
+        'id_number' => $order->meta['id_number'] ?? '',
+        'callbackUrl' => $order->callback_url,
     ]);
-})->middleware(['auth:sanctum', 'email'])->name('vendor.face.payment');
+})->name('vendor.face.payment');
 
 //Route::post('/face-payment', FacePaymentController::class)
 //    ->middleware(['auth:sanctum', 'web', 'vendor'])

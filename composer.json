@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "bavix/laravel-wallet": "^11.4",
+        "frittenkeez/laravel-vouchers": "^0.6.0",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
@@ -20,6 +21,7 @@
         "propaganistas/laravel-phone": "^5.3",
         "spatie/laravel-data": "^4.15",
         "spatie/laravel-medialibrary": "^11.12",
+        "spatie/url": "^2.4",
         "tightenco/parental": "^1.4",
         "tightenco/ziggy": "^2.0",
         "whitecube/php-prices": "^3.1"
