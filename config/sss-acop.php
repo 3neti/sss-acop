@@ -9,6 +9,9 @@ return [
         'id_number' => ['required', 'string'],
         'id_type' => ['required', 'string'],
     ],
+    'field_extraction' => [
+        'confidence' => env('FIELD_EXTRACTION_CONFIDENCE', 'high'),
+    ],
     'result_cache_ttl' => env('RESULT_CACHE_TTL', 30),
     'payment' => [
         'server' => [
