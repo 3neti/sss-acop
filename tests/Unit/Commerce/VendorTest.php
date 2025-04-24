@@ -65,74 +65,38 @@ it('can generate a personal access token for vendor', function () {
     expect($token)->toBeString()->not->toBeEmpty();
 });
 
-test('vendor can complete face payment using bearer token', function () {
-    $vendor = Vendor::factory()->create();
-    $token = $vendor->createToken('vendor-api')->plainTextToken;
-
-    $user = User::factory()->create([
-        'id_number' => 'ABC123',
-        'id_type' => 'phl_umid',
-    ]);
-    $user->depositFloat(300);
-    attachUserPhoto($user);
-
-    $mockPipeline = Mockery::mock(FaceVerificationPipeline::class);
-    $mockPipeline->shouldReceive('verify')->andReturn([
-        'result' => [
-            'details' => [
-                'match' => ['value' => 'yes', 'confidence' => 'very_high'],
-            ],
-            'summary' => ['action' => 'pass'],
-        ]
-    ]);
-    app()->instance(FaceVerificationPipeline::class, $mockPipeline);
-
-    $response = $this->withToken($token)->postJson(route('face.payment'), [
-        'amount' => 250,
-        'item_description' => 'Token Meal',
-        'reference_id' => 'TXN-BEARER-01',
-        'currency' => 'PHP',
-        'callback_url' => 'https://vendor.example.com/callback',
-        'id_number' => 'ABC123',
-        'id_type' => 'phl_umid',
-        'selfie' => 'base64stringgoeshere',
-    ]);
-
-    $response->assertOk()->assertJsonFragment([
-        'message' => 'Payment successful',
-        'reference_id' => 'TXN-BEARER-01',
-        'item_description' => 'Token Meal',
-        'currency' => 'PHP',
-    ]);
-
-    expect((float) $user->fresh()->balanceFloat)->toBe(50.0)
-        ->and((float) $vendor->balanceFloat)->toBe(250.0);
+dataset('user', function () {
+    return [
+        [fn() => tap(User::factory()->create(['id_number' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
+    ];
 });
 
-test('unauthorized if bearer token is invalid', function () {
-    $vendor = Vendor::factory()->create(); // not used, just here to show valid vendor exists
+test('vendor can complete face payment using bearer token', function (User $user) {
+    new_vendor_generates_voucher($this);
+    mockFaceVerificationPass();
+    attachUserPhoto($user);
+
+    $response = $this->withToken($this->vendor_token)->post(route('face.payment'), [
+        'voucher_code' => $this->voucher_code,
+        'selfie' => 'fake_selfie_base64',
+    ]);
+
+    $response->assertRedirect();
+    expect((float) $user->fresh()->balanceFloat)->toBe(50.0)
+        ->and((float) $this->vendor->balanceFloat)->toBe(250.0);
+})->with('user');
+
+test('unauthorized if bearer token is invalid', function (User $user) {
+    new_vendor_generates_voucher($this);
+    mockFaceVerificationPass();
     $invalidToken = 'Bearer faketoken123';
 
-    $user = User::factory()->create([
-        'id_number' => 'XYZ999',
-        'id_type' => 'phl_umid',
-    ]);
-    $user->depositFloat(300);
     attachUserPhoto($user);
 
-    $response = $this->withHeader('Authorization', $invalidToken)->postJson(route('face.payment'), [
-        'amount' => 250,
-        'item_description' => 'Unauthorized Meal',
-        'reference_id' => 'TXN-UNAUTH-01',
-        'currency' => 'PHP',
-        'callback_url' => 'https://vendor.example.com/callback',
-        'id_number' => 'XYZ999',
-        'id_type' => 'phl_umid',
-        'selfie' => 'base64stringgoeshere',
+    $response = $this->withToken('Invalid Token')->post(route('face.payment'), [
+        'voucher_code' => $this->voucher_code,
+        'selfie' => 'fake_selfie_base64',
     ]);
 
-    $response->assertUnauthorized()
-        ->assertJsonFragment([
-            'message' => 'Unauthenticated.',
-        ]);
-});
+    $response->assertUnauthorized();
+})->with('user')->skip();

@@ -1,11 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\{Bus, Config, Http, Storage};
+use Illuminate\Support\Facades\{Config, Http, Storage};
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use function Pest\Laravel\{actingAs, postJson};
 use App\KYC\Services\FaceVerificationPipeline;
-use Illuminate\Http\UploadedFile;
-use App\Commerce\Models\Vendor;
+use function Pest\Laravel\actingAs;
 use App\Models\User;
 use Spatie\Url\Url;
 
@@ -14,53 +12,10 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Storage::fake('public');
     Config::set('sss-acop.identifiers', ['id_number', 'id_type']);
-
-    $vendor_id = Vendor::factory()->create(['name' => 'The Vendor'])->id;
-    $this->vendor = Vendor::find($vendor_id);
-    $this->vendorToken = $this->vendor->createToken('vendor-api')->plainTextToken;
     Http::fake(); // Prevent real callbacks
-
-    $this->reference_id = 'AA537';//Str::uuid();
-    $this->amount = 250.0;
-    $this->payload = [
-        'reference_id' => $this->reference_id,
-        'item_description' => 'Kape Barako',
-        'amount' => $this->amount,
-        'currency' => 'PHP',
-        'id_type' => 'philsys',
-        'id_number' => '6302-5389-1879-5682',
-        'email' => 'test@example.com',
-        'mobile' => '09171234567',
-        'callback_url' => 'https://run.mocky.io/v3/123-callback',
-    ];
-    $response = actingAs($this->vendor, 'sanctum')//this is the culprit
-        ->postJson(route('api.orders.store'), $this->payload)
-    ;
-    $this->voucher_code = $response->json('voucher_code');
+    new_vendor_generates_voucher($this);
 });
-function attachUserPhoto(User $user): void {
-    $user->addMedia(UploadedFile::fake()->image('face.jpg'))
-        ->preservingOriginal()
-        ->toMediaCollection('photo');
-}
-function postFacePayment($test, array $overrides = [])
-{
-    return $test->withToken($test->vendorToken)
-        ->post(route('face.payment'), array_merge([
-            'voucher_code' => $test->voucher_code,
-            'selfie' => 'fake_selfie_base64',
-        ], $overrides));
-}
-function mockFaceVerificationPass() {
-    return app()->instance(FaceVerificationPipeline::class, Mockery::mock(FaceVerificationPipeline::class)
-        ->shouldReceive('verify')
-        ->andReturn([
-            'result' => [
-                'details' => ['match' => ['value' => 'yes', 'confidence' => 'very_high']],
-                'summary' => ['action' => 'pass'],
-            ]
-        ])->getMock());
-}
+
 dataset('user', function () {
     return [
         [fn() => tap(User::factory()->create(['id_number' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
