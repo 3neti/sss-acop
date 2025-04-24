@@ -1,15 +1,13 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\KYC;
 
 use App\KYC\Actions\FetchKYCResult;
-use App\KYC\Events\KYCResultFetched;
 use App\KYC\Events\KYCResultFailed;
+use App\KYC\Events\KYCResultFetched;
 use App\KYC\Support\ParsedKYCResult;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class FetchKYCResultTest extends TestCase

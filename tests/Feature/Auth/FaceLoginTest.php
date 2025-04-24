@@ -1,11 +1,10 @@
 <?php
 
-use App\KYC\Services\MatchFaceService;
-use App\Models\User;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Auth;
+use App\KYC\Services\FaceVerificationPipeline;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use function Pest\Laravel\post;
+use App\Models\User;
 
 beforeEach(function () {
     Storage::fake('public');
@@ -13,97 +12,77 @@ beforeEach(function () {
     $this->user = User::factory()->create([
         'email' => 'johndoe@example.com',
     ]);
-
-    $this->user->addMedia(UploadedFile::fake()->image('face.jpg'))
-        ->preservingOriginal()
-        ->toMediaCollection('profile');
+    attachUserPhoto($this->user);
 });
 
 test('user can login with face using user_id', function () {
-    $mock = Mockery::mock(MatchFaceService::class);
-    $mock->shouldReceive('match')->once()->andReturn([
-        'result' => [
-            'details' => [
-                'match' => [
-                    'value' => 'yes',
-                    'confidence' => 'high',
-                ]
-            ],
-            'summary' => [
-                'action' => 'pass',
-            ]
-        ]
-    ]);
-    app()->instance(MatchFaceService::class, $mock);
-
-    $response = post(route('face.login.attempt'), [
+    mockFaceVerificationPass();
+    post(route('face.login.attempt'), [
         'user_id' => $this->user->id,
+        'id_type' => $this->user->id_type->value,
+        'id_number' => $this->user->id_number,
         'base64img' => fakeBase64Image(),
-    ]);
-
-    $response->assertRedirect(route('dashboard'));
+    ])->assertRedirect('dashboard');
     expect(Auth::user()->is($this->user))->toBeTrue();
 });
 
 test('login fails if face match is unsuccessful', function () {
-    $mock = Mockery::mock(MatchFaceService::class);
-    $mock->shouldReceive('match')->once()->andReturn([
-        'result' => [
-            'details' => [
-                'match' => [
-                    'value' => 'no',
-                    'confidence' => 'low',
-                ]
-            ],
-            'summary' => [
-                'action' => 'fail',
+    app()->instance(FaceVerificationPipeline::class, Mockery::mock(FaceVerificationPipeline::class)
+        ->shouldReceive('verify')
+        ->andReturn([
+            'result' => [
+                'details' => ['match' => ['value' => 'no', 'confidence' => 'low']],
+                'summary' => [
+                    'action' => 'fail',
+                    'details' => [['message' => 'Face mismatch']],
+                ],
             ]
-        ]
-    ]);
-    app()->instance(MatchFaceService::class, $mock);
-
-    $response = post(route('face.login.attempt'), [
+        ])->getMock()
+    );
+    post(route('face.login.attempt'), [
         'user_id' => $this->user->id,
+        'id_type' => $this->user->id_type->value,
+        'id_number' => $this->user->id_number,
         'base64img' => fakeBase64Image(),
-    ]);
-
-    $response->assertSessionHasErrors('base64img');
+    ])->assertSessionHasErrors('base64img');
     expect(Auth::check())->toBeFalse();
 });
 
 test('login fails if required identifier is missing', function () {
-    $mock = Mockery::mock(MatchFaceService::class);
-    $mock->shouldNotReceive('match');
-    app()->instance(MatchFaceService::class, $mock);
-
-    $response = post(route('face.login.attempt'), [
+    mockFaceVerificationPass();
+    post(route('face.login.attempt'), [
+        // Intentionally omitting id_number and id_type
         'base64img' => fakeBase64Image(),
-    ]);
-
-    $response->assertSessionHasErrors('user_id');
+    ])->assertSessionHasErrors(['id_number', 'id_type']);
+    expect(Auth::check())->toBeFalse();
 });
 
 test('match face service receives expected arguments', function () {
-    $spy = Mockery::spy(MatchFaceService::class);
-    $spy->shouldReceive('match')->once()->andReturn([
-        'result' => [
-            'details' => [
-                'match' => [
-                    'value' => 'yes',
-                    'confidence' => 'high',
-                ]
-            ],
-            'summary' => [
-                'action' => 'pass',
+    $mock = Mockery::mock(FaceVerificationPipeline::class);
+    $mock->shouldReceive('verify')
+        ->once()
+        ->withArgs(function (string $referenceCode, string $base64img, string $storedImagePath) {
+            expect($referenceCode)->toStartWith('face_');
+            expect($base64img)->toBeString();
+            expect($storedImagePath)->toBeFile();
+            return true;
+        })
+        ->andReturn([
+            'result' => [
+                'details' => ['match' => ['value' => 'yes', 'confidence' => 'very_high']],
+                'summary' => ['action' => 'pass'],
             ]
-        ]
+        ]);
+    app()->instance(FaceVerificationPipeline::class, $mock);
+    $user = User::factory()->create([
+        'id_number' => '6302-5389-1879-5682',
+        'id_type' => 'philsys',
     ]);
-    app()->instance(MatchFaceService::class, $spy);
-
+    attachUserPhoto($user);
     post(route('face.login.attempt'), [
-        'user_id' => $this->user->id,
+        'id_number' => $user->id_number,
+        'id_type' => $user->id_type->value,
         'base64img' => fakeBase64Image(),
-    ]);
-
-    $spy->shouldHaveReceived('match');
+    ])->assertRedirect(route('dashboard'));
+    expect(Auth::user()->is($user))->toBeTrue();
 });

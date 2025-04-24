@@ -1,45 +1,49 @@
 <?php
 
+use Illuminate\Support\Facades\{Event, Cache, Log};
 use App\KYC\Events\HypervergeStatusReceived;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
+use function Pest\Laravel\get;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     Event::fake();
+    Cache::flush();
     Log::spy();
 });
 
-test('valid webhook triggers event and logs payload', function () {
-    $payload = [
-        'transactionId' => 'txn-001',
-        'status' => 'auto_approved',
-    ];
+it('accepts a valid GET payload and redirects with cached status', function () {
+    $transactionId = Str::uuid()->toString();
+    $status = 'auto_approved';
 
-    $response = $this->get(route('webhooks.hyperverge', $payload), ['Accept' => 'application/json']);
+    $response = get(route('webhooks.hyperverge', [
+        'transactionId' => $transactionId,
+        'status' => $status,
+    ]));
 
-    $response->assertOk()
-        ->assertJson(['message' => 'Webhook received.']);
+    $response->assertRedirect(route('onboarding.status', ['transactionId' => $transactionId]));
 
-    Event::assertDispatched(HypervergeStatusReceived::class, function ($event) {
-        return $event->transactionId === 'txn-001'
-            && $event->status === 'auto_approved';
+    Event::assertDispatched(HypervergeStatusReceived::class, function ($event) use ($transactionId, $status) {
+        return $event->transactionId === $transactionId && $event->status === $status;
     });
+
+    expect(Cache::get("kyc_status_{$transactionId}"))->toBe($status);
 });
 
-test('invalid webhook with missing fields returns 422', function () {
-    $response = $this->get(
-        route('webhooks.hyperverge') . '?status=auto_approved',
-        ['Accept' => 'application/json']
-    );
-    $response->assertStatus(422);
+it('rejects a missing transactionId', function () {
+    $response = get(route('webhooks.hyperverge', [
+        'status' => 'auto_approved',
+    ]));
+
+    $response->assertStatus(302); // Laravel redirects to previous page on validation failure
+    $response->assertSessionHasErrors('transactionId');
 });
 
-test('invalid status value returns validation error', function () {
-    $query = http_build_query([
-        'transactionId' => 'txn-002',
-        'status' => 'not_allowed',
-    ]);
-    $url = route('webhooks.hyperverge') . '?' . $query;
-    $response = $this->get($url, ['Accept' => 'application/json']);
-    $response->assertStatus(422);
+it('rejects an invalid status', function () {
+    $response = get(route('webhooks.hyperverge', [
+        'transactionId' => Str::uuid()->toString(),
+        'status' => 'invalid_status',
+    ]));
+
+    $response->assertStatus(302);
+    $response->assertSessionHasErrors('status');
 });
