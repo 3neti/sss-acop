@@ -19,12 +19,13 @@ class ProductFactory extends Factory
      */
     public function definition(): array
     {
+        $vendor_id = Vendor::factory()->create(['name' => 'The Vendor'])->id;
         return [
             'name' => fake()->word,
             'description' => fake()->sentence,
             'price' => fake()->numberBetween( 50, 5000),
             'currency' => 'PHP',
-            'vendor_id' => Vendor::factory(),
+            'vendor_id' => $vendor_id,
         ];
     }
 }
