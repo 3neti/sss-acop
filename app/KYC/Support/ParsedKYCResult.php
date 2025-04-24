@@ -54,7 +54,7 @@ class ParsedKYCResult
         return Str::of(Arr::get($this->idCardModule?->fields, 'address'))->title();
     }
 
-    public function idNumber(): ?string
+    public function idValue(): ?string
     {
         return Arr::get($this->idCardModule?->fields, 'idNumber');
     }
@@ -88,7 +88,7 @@ class ParsedKYCResult
             'idType' => $this->idType(),
             'fullName' => $this->fullName(),
             'address' => $this->address(),
-            'idNumber' => $this->idNumber(),
+            'idNumber' => $this->idValue(),
             'birthDate' => $this->birthdate(),
             'photo' => $this->photo(),
         ];

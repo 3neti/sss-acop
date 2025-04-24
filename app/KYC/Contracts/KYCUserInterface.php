@@ -4,7 +4,7 @@ namespace App\KYC\Contracts;
 
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use App\KYC\Enums\HypervergeCountry;
-use App\KYC\Enums\HypervergeIdType;
+use App\KYC\Enums\KYCIdType;
 use Spatie\MediaLibrary\HasMedia;
 
 interface KYCUserInterface extends HasMedia
@@ -15,5 +15,5 @@ interface KYCUserInterface extends HasMedia
 
     public function getCountry(): ?HypervergeCountry;
 
-    public function getIdType(): ?HypervergeIdType;
+    public function getIdType(): ?KYCIdType;
 }

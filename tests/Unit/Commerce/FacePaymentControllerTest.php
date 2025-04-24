@@ -11,14 +11,14 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Storage::fake('public');
-    Config::set('sss-acop.identifiers', ['id_number', 'id_type']);
+    Config::set('sss-acop.identifiers', ['id_value', 'id_type']);
     Http::fake(); // Prevent real callbacks
     new_vendor_generates_voucher($this);
 });
 
 dataset('user', function () {
     return [
-        [fn() => tap(User::factory()->create(['id_number' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
+        [fn() => tap(User::factory()->create(['id_value' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
     ];
 });
 
@@ -93,7 +93,7 @@ it('blocks access for non-vendor users', function (User $user) {
         'amount' => 250.0,
         'currency' => 'PHP',
         'id_type' => 'philsys',
-        'id_number' => '6302-5389-1879-5682',
+        'id_value' => '6302-5389-1879-5682',
         'email' => 'test@example.com',
         'mobile' => '09171234567',
         'callback_url' => 'https://run.mocky.io/v3/123-callback',

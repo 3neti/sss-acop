@@ -30,10 +30,10 @@ class CreateSystemUserFromKYC extends Command
             }
 
             $user = User::where('id_type', config('sss-acop.system.user.id_type'))
-                ->where('id_number', config('sss-acop.system.user.id_number'))
+                ->where('id_value', config('sss-acop.system.user.id_value'))
                 ->firstOrFail();
 
-            $this->info("User [{$user->name}] found with ID type/number: {$parsed->idType()}: {$parsed->idNumber()}");
+            $this->info("User [{$user->name}] found with ID type/number: {$parsed->idType()}: {$parsed->idValue()}");
 
             // Promote to system type if needed
             if ($user->type !== 'system') {

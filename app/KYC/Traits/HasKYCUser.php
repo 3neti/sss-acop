@@ -2,7 +2,7 @@
 
 namespace App\KYC\Traits;
 
-use App\KYC\Enums\{HypervergeCountry, HypervergeIdType};
+use App\KYC\Enums\{HypervergeCountry, KYCIdType};
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Support\Str;
@@ -22,7 +22,7 @@ trait HasKYCUser
     public function initializeHasKYCUser(): void
     {
         $this->mergeFillable([
-            'id_number',
+            'id_value',
             'id_type',
             'mobile',
             'country',
@@ -31,7 +31,7 @@ trait HasKYCUser
 
         $this->mergeCasts([
             'country' => HypervergeCountry::class,
-            'id_type' => HypervergeIdType::class,
+            'id_type' => KYCIdType::class,
             'birthdate' => 'date',
         ]);
     }
@@ -43,7 +43,7 @@ trait HasKYCUser
 
     public function getKYCIdentifier(): string
     {
-        return $this->id_number ?? $this->mobile ?? 'unknown';
+        return $this->id_value ?? $this->mobile ?? 'unknown';
     }
 
     public function getCountry(): ?HypervergeCountry
@@ -53,11 +53,11 @@ trait HasKYCUser
             : HypervergeCountry::tryFrom(Str::lower($this->country));
     }
 
-    public function getIdType(): ?HypervergeIdType
+    public function getIdType(): ?KYCIdType
     {
-        return $this->id_type instanceof HypervergeIdType
+        return $this->id_type instanceof KYCIdType
             ? $this->id_type
-            : HypervergeIdType::tryFrom(Str::lower($this->id_type));
+            : KYCIdType::tryFrom(Str::lower($this->id_type));
     }
 
     public function registerMediaCollections(): void

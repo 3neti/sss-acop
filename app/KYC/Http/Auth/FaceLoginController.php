@@ -8,7 +8,7 @@ use App\Http\Requests\Auth\FaceLoginRequest;
 use Inertia\Response as InertiaResponse;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\Controller;
-use App\KYC\Enums\HypervergeIdType;
+use App\KYC\Enums\KYCIdType;
 use Inertia\ResponseFactory;
 use Illuminate\Support\Arr;
 use App\Models\User;
@@ -16,13 +16,13 @@ use Exception;
 
 class FaceLoginController extends Controller
 {
-    protected array $fields = ['id_number', 'id_type'];
+    protected array $fields = ['id_value', 'id_type'];
 
     public function showForm(): InertiaResponse|ResponseFactory
     {
         return inertia('Auth/FaceLogin', [
             'fields' => $this->fields,
-            'idTypes' => HypervergeIdType::options(),
+            'idTypes' => KYCIdType::options(),
             'autoFaceLogin' => config('sss-acop.auto_face_login'),
         ]);
     }

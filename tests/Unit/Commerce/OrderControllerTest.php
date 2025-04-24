@@ -20,7 +20,7 @@ it('creates an order and voucher successfully', function () {
         'amount' => 199.99,
         'currency' => 'PHP',
         'id_type' => 'philsys',
-        'id_number' => '6302-5389-1879-5682',
+        'id_value' => '6302-5389-1879-5682',
         'email' => 'test@example.com',
         'mobile' => '09171234567',
         'callback_url' => 'https://run.mocky.io/v3/123-callback',

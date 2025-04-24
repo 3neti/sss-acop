@@ -18,7 +18,7 @@ const props = defineProps({
             mobile: 'Mobile',
             user_id: 'User ID',
             otp: 'One-Time Password',
-            id_number: 'ID Number',
+            id_value: 'ID Value',
             id_type: 'ID Type'
         }),
     },
@@ -28,7 +28,7 @@ const props = defineProps({
             email: ['required', 'email'],
             mobile: ['required', 'regex:^09\\d{9}$'],
             user_id: ['required'],
-            id_number: ['required'],
+            id_value: ['required'],
             id_type: ['required'],
             otp: ['required', 'digits:6'],
         }),
@@ -194,7 +194,7 @@ const fieldTypes = {
     email: 'email',
     mobile: 'tel',
     user_id: 'text',
-    id_number: 'text',
+    id_value: 'text',
     id_type: 'text',
     otp: 'text',
 };

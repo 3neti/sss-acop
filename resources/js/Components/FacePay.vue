@@ -16,7 +16,7 @@ const props = defineProps({
         type: String,
         default: '',
     },
-    id_number: {
+    id_value: {
         type: String,
         default: '',
     },
@@ -42,7 +42,7 @@ const form = useForm({
     callback_url: props.callbackUrl,
     currency: props.currency,
     id_type: props.id_type,
-    id_number: props.id_number,
+    id_value: props.id_value,
     selfie: '',
 })
 
@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
 
             <div>
                 <label class="block text-sm text-gray-600">Id Number</label>
-                <input v-model="form.id_number" type="text" class="w-full border rounded px-3 py-2 text-sm" />
+                <input v-model="form.id_value" type="text" class="w-full border rounded px-3 py-2 text-sm" />
             </div>
 
             <div class="relative w-full aspect-video rounded border overflow-hidden">

@@ -18,7 +18,7 @@ class FacePaymentPageTest extends DuskTestCase
 //        $user = User::factory()->create([
 //            'email_verified_at' => now(),
 //            'id_type' => 'philsys',
-//            'id_number' => '6302-5389-1879-5682',
+//            'id_value' => '6302-5389-1879-5682',
 //        ]);
 
         $system = System::factory()->create();

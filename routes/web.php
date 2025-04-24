@@ -68,7 +68,7 @@ Route::get('/vendor/face-payment/{voucher_code}', function (string $voucher_code
         'amount' => $order->amount,
         'currency' => $order->currency,
         'id_type' => $order->meta['id_type'] ?? '',
-        'id_number' => $order->meta['id_number'] ?? '',
+        'id_value' => $order->meta['id_value'] ?? '',
         'callbackUrl' => $order->callback_url,
     ]);
 })->name('vendor.face.payment');

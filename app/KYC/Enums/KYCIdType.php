@@ -2,7 +2,7 @@
 
 namespace App\KYC\Enums;
 
-enum HypervergeIdType: string
+enum KYCIdType: string
 {
     case PHL_DL = 'phl_dl';
     case PHL_UMID = 'phl_umid';

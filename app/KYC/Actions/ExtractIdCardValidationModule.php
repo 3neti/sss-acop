@@ -5,7 +5,7 @@ namespace App\KYC\Actions;
 use App\KYC\Data\IdCardValidationModuleData;
 use App\KYC\Data\IdCardExtractedFieldsData;
 use Lorisleiva\Actions\Concerns\AsAction;
-use App\KYC\Enums\HypervergeIdType;
+use App\KYC\Enums\KYCIdType;
 use Illuminate\Support\{Arr, Str};
 use App\KYC\Data\KYCResultData;
 
@@ -42,9 +42,9 @@ class ExtractIdCardValidationModule
         return null;
     }
 
-    protected function castIdType(?string $value): ?HypervergeIdType
+    protected function castIdType(?string $value): ?KYCIdType
     {
-        return $value ? HypervergeIdType::tryFrom(Str::lower($value)) : null;
+        return $value ? KYCIdType::tryFrom(Str::lower($value)) : null;
     }
 
 //    protected function mapHighConfidenceFields(array $fields): array

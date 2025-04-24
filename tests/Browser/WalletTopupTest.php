@@ -27,15 +27,15 @@ test('basic example', function () {
     $user = User::factory()->create([
         'email' => 'taylor@laravel.com',
         'id_type' => 'phl_dl',
-        'id_number' => 'N01-87-049586',
+        'id_value' => 'N01-87-049586',
     ]);
 
 
     $this->browse(function (Browser $browser) use ($user) {
         $browser->visit('/login')
-            ->assertVisible('#id_number')
+            ->assertVisible('#id_value')
             ->type('id_type', $user->id_type)
-            ->type('id_number', $user->id_number)
+            ->type('id_value', $user->id_value)
             ->press('Login')
             ->assertPathIs('/home')
         ;

@@ -6,7 +6,7 @@ return [
         'email' => ['required', 'email', 'exists:users,email'],
         'mobile' => ['required', 'regex:/^09\d{9}$/', 'exists:users,mobile'],
         'user_id' => ['required', 'integer', 'exists:users,id'],
-        'id_number' => ['required', 'string'],
+        'id_value' => ['required', 'string'],
         'id_type' => ['required', 'string'],
     ],
     'field_extraction' => [
@@ -26,8 +26,8 @@ return [
     ],
     'system' => [
         'user' => [
-            'id_type' => env('SYSTEM_USER_TYPE_ID', 'phl_dl'),
-            'id_number' => env('SYSTEM_USER_TYPE_ID', 'N01-87-049586'),
+            'id_type' => env('SYSTEM_USER_ID_TYPE', 'phl_dl'),
+            'id_value' => env('SYSTEM_USER_ID_VALUE', 'N01-87-049586'),
         ],
         'allowed_as_vendor' => env('ALLOWED_AS_VENDOR', false),
     ]

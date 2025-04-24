@@ -39,7 +39,7 @@ class FacePaymentController extends Controller
 ;
         $user = User::where([
             'id_type' => $order->meta['id_type'] ?? null,
-            'id_number' => $order->meta['id_number'] ?? null,
+            'id_value' => $order->meta['id_value'] ?? null,
         ])->firstOrFail();
 
         $meta = [

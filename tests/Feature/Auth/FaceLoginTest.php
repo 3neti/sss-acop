@@ -20,7 +20,7 @@ test('user can login with face using user_id', function () {
     post(route('face.login.attempt'), [
         'user_id' => $this->user->id,
         'id_type' => $this->user->id_type->value,
-        'id_number' => $this->user->id_number,
+        'id_value' => $this->user->id_value,
         'base64img' => fakeBase64Image(),
     ])->assertRedirect('dashboard');
     expect(Auth::user()->is($this->user))->toBeTrue();
@@ -42,7 +42,7 @@ test('login fails if face match is unsuccessful', function () {
     post(route('face.login.attempt'), [
         'user_id' => $this->user->id,
         'id_type' => $this->user->id_type->value,
-        'id_number' => $this->user->id_number,
+        'id_value' => $this->user->id_value,
         'base64img' => fakeBase64Image(),
     ])->assertSessionHasErrors('base64img');
     expect(Auth::check())->toBeFalse();
@@ -51,9 +51,9 @@ test('login fails if face match is unsuccessful', function () {
 test('login fails if required identifier is missing', function () {
     mockFaceVerificationPass();
     post(route('face.login.attempt'), [
-        // Intentionally omitting id_number and id_type
+        // Intentionally omitting id_value and id_type
         'base64img' => fakeBase64Image(),
-    ])->assertSessionHasErrors(['id_number', 'id_type']);
+    ])->assertSessionHasErrors(['id_value', 'id_type']);
     expect(Auth::check())->toBeFalse();
 });
 
@@ -75,12 +75,12 @@ test('match face service receives expected arguments', function () {
         ]);
     app()->instance(FaceVerificationPipeline::class, $mock);
     $user = User::factory()->create([
-        'id_number' => '6302-5389-1879-5682',
+        'id_value' => '6302-5389-1879-5682',
         'id_type' => 'philsys',
     ]);
     attachUserPhoto($user);
     post(route('face.login.attempt'), [
-        'id_number' => $user->id_number,
+        'id_value' => $user->id_value,
         'id_type' => $user->id_type->value,
         'base64img' => fakeBase64Image(),
     ])->assertRedirect(route('dashboard'));

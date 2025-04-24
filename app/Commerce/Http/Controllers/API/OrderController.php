@@ -17,7 +17,7 @@ class OrderController extends Controller
             'amount'           => ['required', 'numeric', 'min:0'],
             'currency'         => ['nullable', 'string', 'size:3'],
             'id_type'          => ['nullable', 'string'],
-            'id_number'        => ['nullable', 'string'],
+            'id_value'         => ['nullable', 'string'],
             'email'            => ['nullable', 'string'],
             'mobile'           => ['nullable', 'string'],
             'callback_url'     => ['required', 'url'],
@@ -34,7 +34,7 @@ class OrderController extends Controller
             'meta' => [
                 'item_description' => $validated['item_description'],
                 'id_type'          => $validated['id_type'] ?? null,
-                'id_number'        => $validated['id_number'] ?? null,
+                'id_value'         => $validated['id_value'] ?? null,
                 'email'            => $validated['email'] ?? null,
                 'mobile'           => $validated['mobile'] ?? null,
             ],

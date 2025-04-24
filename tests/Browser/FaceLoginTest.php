@@ -4,7 +4,7 @@ use Laravel\Dusk\Browser;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use App\Models\User;
-use App\KYC\Enums\HypervergeIdType;
+use App\KYC\Enums\KYCIdType;
 
 uses(DatabaseMigrations::class);
 
@@ -13,8 +13,8 @@ beforeEach(function () {
 
     // Create test user with selfie and KYC identifiers
     $this->user = User::factory()->create([
-        'id_type' => HypervergeIdType::PHL_DL,
-        'id_number' => '1234567890',
+        'id_type' => KYCIdType::PHL_DL,
+        'id_value' => '1234567890',
     ]);
 
     $this->user->addMedia(resource_path('tests/selfie.jpeg'))
@@ -25,8 +25,8 @@ beforeEach(function () {
 it('logs in via face using ID number', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/login')
-            ->assertVisible('#id_number')
-            ->type('#id_number', '1234567890')
+            ->assertVisible('#id_value')
+            ->type('#id_value', '1234567890')
             ->select('#id_type', 'phl_dl')
             ->waitFor('video', 5)
             ->pause(500) // Let camera initialize

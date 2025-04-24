@@ -24,7 +24,7 @@ class AdminSeeder extends Seeder
             'name' => 'Rachelle Frazier',
             'email' => 'larissa82@example.org',
             'password' => bcrypt('secret'),
-            'id_number' => '123456789',
+            'id_value' => '123456789',
             'birthdate' => '1990-01-01',
         ]);
 
@@ -33,7 +33,7 @@ class AdminSeeder extends Seeder
             'name' => 'Leah Brown',
             'email' => 'west.susana@example.org',
             'password' => bcrypt('secret'),
-            'id_number' => '234567890',
+            'id_value' => '234567890',
             'birthdate' => '1990-01-01',
         ]);
 

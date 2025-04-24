@@ -95,7 +95,7 @@ class User extends Authenticatable implements KYCUserInterface, Customer, Wallet
     public static function systemUser(): self
     {
         return static::where('id_type', config('sss-acop.system.user.id_type'))
-            ->where('id_number', config('sss-acop.system.user.id_number'))
+            ->where('id_value', config('sss-acop.system.user.id_value'))
             ->firstOrFail();
     }
 }

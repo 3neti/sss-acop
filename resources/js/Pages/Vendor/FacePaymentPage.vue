@@ -17,7 +17,7 @@ const props = defineProps({
         type: String,
         default: '',
     },
-    id_number: {
+    id_value: {
         type: String,
         default: '',
     },
@@ -52,7 +52,7 @@ watch(
             :amount="amount"
             :currency="currency"
             :id_type="id_type"
-            :id_number="id_number"
+            :id_value="id_value"
             :callback-url="callbackUrl"
         />
     </div>

@@ -67,7 +67,7 @@ it('can generate a personal access token for vendor', function () {
 
 dataset('user', function () {
     return [
-        [fn() => tap(User::factory()->create(['id_number' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
+        [fn() => tap(User::factory()->create(['id_value' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
     ];
 });
 

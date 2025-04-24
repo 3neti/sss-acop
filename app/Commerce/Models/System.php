@@ -15,7 +15,7 @@ class System extends User
         return UserFactory::new()->state([
             'type' => 'system',
             'id_type' => config('sss-acop.system.user.id_type'),
-            'id_number' => config('sss-acop.system.user.id_number'),
+            'id_value' => config('sss-acop.system.user.id_value'),
         ]);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\KYC\Data;
 
-use App\KYC\Enums\{HypervergeCountry, HypervergeDocument, HypervergeIdType};
+use App\KYC\Enums\{HypervergeCountry, HypervergeDocument, KYCIdType};
 use Spatie\LaravelData\{Attributes\WithCast, Casts\EnumCast, Data, Optional};
 
 class KYCModuleResultData extends Data

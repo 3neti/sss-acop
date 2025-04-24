@@ -18,7 +18,7 @@ class CreateUserFromKYCResult
             selfieModule: ExtractSelfieValidationModule::run($event->data),
         );
 
-        if (! $parsed->idNumber() || ! $parsed->fullName()) {
+        if (! $parsed->idValue() || ! $parsed->fullName()) {
             Log::warning('[CreateUserFromKYCResult] Incomplete parsed KYC data', [
                 'transactionId' => $event->transactionId,
             ]);
@@ -26,7 +26,7 @@ class CreateUserFromKYCResult
         }
 
         $user = User::firstOrCreate(
-            ['id_number' => $parsed->idNumber()], // stronger key
+            ['id_value' => $parsed->idValue()], // stronger key
             [
                 'name' => $parsed->fullName(),
                 'birthdate' => $parsed->birthdate(),
