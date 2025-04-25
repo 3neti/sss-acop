@@ -17,7 +17,7 @@ Route::post('/face-payment', FacePaymentController::class)
 Route::post('wallet/qr-code', [WalletController::class, 'generateDepositQRCode'])->middleware(['web'])->name('wallet.qr-code');
 Route::post('wallet/topup', [WalletController::class, 'topupWallet'])->name('wallet.topup');
 
-
+//Route::post('/profile/token', TokenController::class)->name('profile.token.generate');
 
 // Group for vendor-authenticated API routes
 Route::middleware(['auth:sanctum', 'vendor'])->prefix('orders')->name('api.orders.')->group(function () {

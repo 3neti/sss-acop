@@ -1,5 +1,6 @@
 <?php
 
+use App\Commerce\Http\Controllers\API\GenerateTokenController;
 use App\Commerce\Http\Controllers\FacePaymentController;
 use App\Commerce\Models\Order;
 use App\Commerce\Models\Vendor;
@@ -33,6 +34,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/profile/token', GenerateTokenController::class)
+        ->name('profile.token.generate');
 });
 
 Route::get('/test-image', [\App\Http\Controllers\TestController::class, 'showBase64Page'])->name('test.image');
