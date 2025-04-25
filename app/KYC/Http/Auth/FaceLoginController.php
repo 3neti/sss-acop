@@ -16,22 +16,36 @@ use Exception;
 
 class FaceLoginController extends Controller
 {
-    protected array $fields = ['id_value', 'id_type'];
+//    protected array $fields = ['id_value', 'id_type'];
+
+    protected array $defaultFields = ['id_value', 'id_type'];
 
     public function showForm(): InertiaResponse|ResponseFactory
     {
+        $fields = config('sss-acop.identifiers', $this->defaultFields); // 👈 get from config
+
         return inertia('Auth/FaceLogin', [
-            'fields' => $this->fields,
+            'fields' => $fields,
             'idTypes' => KYCIdType::options(),
             'autoFaceLogin' => config('sss-acop.auto_face_login'),
         ]);
     }
 
+//    public function showForm(): InertiaResponse|ResponseFactory
+//    {
+//        return inertia('Auth/FaceLogin', [
+//            'fields' => $this->fields,
+//            'idTypes' => KYCIdType::options(),
+//            'autoFaceLogin' => config('sss-acop.auto_face_login'),
+//        ]);
+//    }
+
     public function authenticate(FaceLoginRequest $request): RedirectResponse
     {
-        Log::info('[FaceLogin] Authenticating', ['fields' => $this->fields]);
+        $fields = config('sss-acop.identifiers', $this->defaultFields);
+        Log::info('[FaceLogin] Authenticating', ['fields' => $fields]);
 
-        $user = $this->findUserFromRequest($request);
+        $user = $this->findUserFromRequest($request, $fields);
 
         if (!$user) {
             return back()->withErrors(['base64img' => 'User not found or invalid identifier.']);
@@ -119,20 +133,27 @@ class FaceLoginController extends Controller
     protected function findUserFromRequest(FaceLoginRequest $request): ?User
     {
         $query = User::query();
-        $conditions = [];
 
-        foreach ($this->fields as $field) {
-            if ($request->filled($field)) {
-                $conditions[$field] = $request->input($field);
-            }
+        $idType = $request->input('id_type');
+        $idValue = $request->input('id_value');
+
+        // Validate that idType is a valid enum
+        $idTypeEnum = KYCIdType::tryFrom($idType);
+
+        if ($idTypeEnum === null) {
+            Log::warning('[FaceLogin] Invalid id_type received', ['id_type' => $idType]);
+            return null;
         }
 
-        if (!empty($conditions)) {
-            Log::info('[FaceLogin] Dynamic identifier match', $conditions);
-            return $query->where($conditions)->first();
+        if ($idTypeEnum->isNative()) {
+            Log::info('[FaceLogin] Matching native field', ['field' => $idType, 'value' => $idValue]);
+            return $query->where($idType, $idValue)->first();
         }
-        Log::warning('[FaceLogin] No valid dynamic identifiers provided.');
 
-        return null;
+        Log::info('[FaceLogin] Matching KYC ID', ['id_type' => $idType, 'id_value' => $idValue]);
+        return $query->where([
+            'id_type' => $idType,
+            'id_value' => $idValue,
+        ])->first();
     }
 }

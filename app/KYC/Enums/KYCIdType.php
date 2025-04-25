@@ -4,16 +4,45 @@ namespace App\KYC\Enums;
 
 enum KYCIdType: string
 {
-    case PHL_DL = 'phl_dl';
+    // Government-issued IDs
+    case PHL_DL   = 'phl_dl';
     case PHL_UMID = 'phl_umid';
-    case PHL_SYS = 'philsys';
+    case PHL_SYS  = 'philsys';
+
+    // App-native identifiers
+    case EMAIL    = 'email';
+    case MOBILE   = 'mobile';
+    case PIN      = 'pin';
+
+    public function isNative(): bool
+    {
+        return in_array($this, [self::EMAIL, self::MOBILE, self::PIN]);
+    }
+
+    public function isKycId(): bool
+    {
+        return ! $this->isNative();
+    }
+
+    public static function kycOptions(): array
+    {
+        return array_filter(self::cases(), fn($case) => $case->isKycId());
+    }
+
+    public static function nativeOptions(): array
+    {
+        return array_filter(self::cases(), fn($case) => $case->isNative());
+    }
 
     public function label(): string
     {
         return match ($this) {
-            self::PHL_DL   => 'Philippine Driver\'s License',
-            self::PHL_UMID => 'Unified Multi-purpose ID',
-            self::PHL_SYS => 'Philippine ID',
+            self::PHL_DL   => "Driver's License",
+            self::PHL_UMID => 'UMID',
+            self::PHL_SYS  => 'Philippine ID',
+            self::EMAIL    => 'Email Address',
+            self::MOBILE   => 'Mobile Number',
+            self::PIN      => 'Security PIN',
         };
     }
 
