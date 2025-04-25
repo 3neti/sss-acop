@@ -21,7 +21,6 @@ class SystemSeeder extends Seeder
             $system->mobile = '09173011987';
             $system->save();
         })->createToken('vendor-api')->plainTextToken;
-//        $token = $vendor->createToken('vendor-api')->plainTextToken;
         echo 'API Token ' . $token . "\n";
 
         // Copy to clipboard based on OS

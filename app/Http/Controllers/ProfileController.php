@@ -30,16 +30,12 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-//        $request->user()->fill($request->validated());
-//
-//        if ($request->user()->isDirty('email')) {
-//            $request->user()->email_verified_at = null;
-//        }
-//
-//        $request->user()->save();
-
         $user = $request->user();
-        $user->fill($request->validated());
+        $validated = $request->validated();
+        unset($validated['photo']);
+        foreach ($validated as $key => $value) {
+            $user->{$key} = $value; // triggers __set for bridge attributes
+        }
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;

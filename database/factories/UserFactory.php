@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\KYC\Enums\KYCIdType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
+use App\KYC\Models\Identification;
 use Illuminate\Support\Str;
 
 /**
@@ -30,13 +30,20 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-
-            'id_value' => (string) fake()->numberBetween(1000000000, 9999999999),
-            'id_type' => KYCIdType::random()->value,
-            'mobile' => fake()->phoneNumber,
+//            'mobile' => fake()->phoneNumber,
             'country' => 'phl',
             'birthdate' => fake()->date,
         ];
+    }
+
+    public function withSystemIdentification(): static
+    {
+        return $this->has(
+            Identification::factory()->state([
+                'id_type' => config('sss-acop.system.user.id_type'),
+                'id_value' => config('sss-acop.system.user.id_value'),
+            ])
+        );
     }
 
     /**

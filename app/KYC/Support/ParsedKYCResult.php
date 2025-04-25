@@ -102,4 +102,14 @@ class ParsedKYCResult
             'selfieModule' => $this->selfieModule,
         ];
     }
+
+    public function email(): ?string
+    {
+        return null;
+    }
+
+    public function mobile(): ?string
+    {
+        return null;
+    }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\KYC\Models\Identification;
 use App\Models\User;
 
 test('profile page is displayed', function () {
@@ -13,7 +14,7 @@ test('profile page is displayed', function () {
 });
 
 test('profile information can be updated', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->has(Identification::factory()->mobile())->create();
 
     $response = $this
         ->actingAs($user)
@@ -25,7 +26,8 @@ test('profile information can be updated', function () {
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
+        ->assertRedirect('/profile')
+    ;
 
     $user->refresh();
 

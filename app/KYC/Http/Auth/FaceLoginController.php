@@ -132,28 +132,33 @@ class FaceLoginController extends Controller
 
     protected function findUserFromRequest(FaceLoginRequest $request): ?User
     {
-        $query = User::query();
+//        $query = User::query();
 
         $idType = $request->input('id_type');
         $idValue = $request->input('id_value');
 
-        // Validate that idType is a valid enum
-        $idTypeEnum = KYCIdType::tryFrom($idType);
+        return User::whereHas('identifications', fn ($q) =>
+            $q->where('id_type', $idType)->where('id_value', $idValue)
+        )->first();
 
-        if ($idTypeEnum === null) {
-            Log::warning('[FaceLogin] Invalid id_type received', ['id_type' => $idType]);
-            return null;
-        }
-
-        if ($idTypeEnum->isNative()) {
-            Log::info('[FaceLogin] Matching native field', ['field' => $idType, 'value' => $idValue]);
-            return $query->where($idType, $idValue)->first();
-        }
-
-        Log::info('[FaceLogin] Matching KYC ID', ['id_type' => $idType, 'id_value' => $idValue]);
-        return $query->where([
-            'id_type' => $idType,
-            'id_value' => $idValue,
-        ])->first();
+//        // Validate that idType is a valid enum
+//        $idTypeEnum = KYCIdType::tryFrom($idType);
+//
+//        if ($idTypeEnum === null) {
+//            Log::warning('[FaceLogin] Invalid id_type received', ['id_type' => $idType]);
+//            return null;
+//        }
+//
+//        if ($idTypeEnum->isNative()) {
+//            Log::info('[FaceLogin] Matching native field', ['field' => $idType, 'value' => $idValue]);
+//            return $query->where($idType, $idValue)->first();
+//        }
+//
+//
+//        Log::info('[FaceLogin] Matching KYC ID', ['id_type' => $idType, 'id_value' => $idValue]);
+//        return $query->where([
+//            'id_type' => $idType,
+//            'id_value' => $idValue,
+//        ])->first();
     }
 }

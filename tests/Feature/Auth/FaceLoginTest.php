@@ -4,6 +4,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\KYC\Services\FaceVerificationPipeline;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\KYC\Models\Identification;
 use function Pest\Laravel\post;
 use App\KYC\Enums\KYCIdType;
 use App\Models\User;
@@ -13,11 +14,12 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Storage::fake('public');
 
-    $this->user = User::factory()->create([
-        'id_type' => KYCIdType::PHL_SYS,
-        'id_value' => '6302-5389-1879-5682',
-        'email' => 'johndoe@example.com',
-    ]);
+    // Setup user with valid KYC and native identifiers
+    $this->user = User::factory()
+        ->has(Identification::factory()->state(['id_type' => KYCIdType::PHL_SYS, 'id_value' => '6302-5389-1879-5682']))
+        ->has(Identification::factory()->mobile('09171234567'))
+        ->create(['email' => 'johndoe@example.com'])
+    ;
     attachUserPhoto($this->user);
 });
 
@@ -25,19 +27,31 @@ test('user can login with face using ID type and value', function () {
     mockFaceVerificationPass();
 
     post(route('face.login.attempt'), [
-        'id_type' => $this->user->id_type->value,
-        'id_value' => $this->user->id_value,
+        'id_type' => KYCIdType::PHL_SYS->value,
+        'id_value' => $this->user->resolveIdentifier(KYCIdType::PHL_SYS),
         'base64img' => fakeBase64Image(),
     ])->assertRedirect(route('dashboard'));
 
     expect(Auth::user()->is($this->user))->toBeTrue();
 });
 
-test('user can login with face using native field: email', function () {
+test('user can login with face using mobile bridge attribute', function () {
     mockFaceVerificationPass();
 
     post(route('face.login.attempt'), [
-        'id_type' => 'email',
+        'id_type' => KYCIdType::MOBILE->value,
+        'id_value' => $this->user->mobile,
+        'base64img' => fakeBase64Image(),
+    ])->assertRedirect(route('dashboard'));
+
+    expect(Auth::user()->is($this->user))->toBeTrue();
+});
+
+test('user can login with face using email identifier', function () {
+    mockFaceVerificationPass();
+
+    post(route('face.login.attempt'), [
+        'id_type' => KYCIdType::EMAIL->value,
         'id_value' => $this->user->email,
         'base64img' => fakeBase64Image(),
     ])->assertRedirect(route('dashboard'));
@@ -98,8 +112,8 @@ test('match face service receives expected arguments', function () {
     app()->instance(FaceVerificationPipeline::class, $mock);
 
     post(route('face.login.attempt'), [
-        'id_type' => 'email',
-        'id_value' => $this->user->email,
+        'id_type' => 'mobile',
+        'id_value' => $this->user->mobile,
         'base64img' => fakeBase64Image(),
     ])->assertRedirect(route('dashboard'));
 

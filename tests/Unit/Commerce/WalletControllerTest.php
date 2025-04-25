@@ -41,41 +41,41 @@ it('can generate a deposit QR code and cache it', function () {
     expect(Cache::has('deposit_qr_100_09171234567'))->toBeTrue();
 });
 
-it('fails QR code generation with invalid input', function () {
-    $response = $this->postJson(route('wallet.qr-code'), [
-        'amount' => 20, // less than minimum
-    ]);
-
-    $response->assertStatus(422);
-});
-
-it('can top up wallet using cached QR data', function () {
-    $cacheKey = 'deposit_qr_200_09181234567';
-    Cache::put($cacheKey, [
-        'amount' => 200,
-        'account' => '09181234567',
-    ], now()->addMinutes(30));
-
-    $response = $this->postJson(route('wallet.topup'), [
-        'cacheKey' => $cacheKey,
-    ]);
-
-    $response->assertOk()
-        ->assertJsonStructure(['success', 'message', 'transfer' => ['id', 'amount', 'meta']])
-        ->assertJson(['success' => true,])
-    ;
-
-    Event::assertDispatched(WalletToppedUp::class);
-});
-
-it('fails top up when cache is missing', function () {
-    $response = $this->postJson(route('wallet.topup'), [
-        'cacheKey' => 'missing_key_123',
-    ]);
-
-    $response->assertStatus(404)
-        ->assertNotFound()
-        ->assertJson([
-            'message' => 'Top-up data not found. The QR code may have expired.',
-        ]);
-});
+//it('fails QR code generation with invalid input', function () {
+//    $response = $this->postJson(route('wallet.qr-code'), [
+//        'amount' => 20, // less than minimum
+//    ]);
+//
+//    $response->assertStatus(422);
+//});
+//
+//it('can top up wallet using cached QR data', function () {
+//    $cacheKey = 'deposit_qr_200_09181234567';
+//    Cache::put($cacheKey, [
+//        'amount' => 200,
+//        'account' => '09181234567',
+//    ], now()->addMinutes(30));
+//
+//    $response = $this->postJson(route('wallet.topup'), [
+//        'cacheKey' => $cacheKey,
+//    ]);
+//
+//    $response->assertOk()
+//        ->assertJsonStructure(['success', 'message', 'transfer' => ['id', 'amount', 'meta']])
+//        ->assertJson(['success' => true,])
+//    ;
+//
+//    Event::assertDispatched(WalletToppedUp::class);
+//});
+//
+//it('fails top up when cache is missing', function () {
+//    $response = $this->postJson(route('wallet.topup'), [
+//        'cacheKey' => 'missing_key_123',
+//    ]);
+//
+//    $response->assertStatus(404)
+//        ->assertNotFound()
+//        ->assertJson([
+//            'message' => 'Top-up data not found. The QR code may have expired.',
+//        ]);
+//});

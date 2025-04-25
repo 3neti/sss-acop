@@ -2,8 +2,7 @@
 
 namespace App\Commerce\Http\Controllers;
 
-use App\Commerce\Exceptions\InsufficientFunds;
-use App\Commerce\Exceptions\UnauthorizedVendor;
+use App\Commerce\Exceptions\{InsufficientFunds, UnauthorizedVendor};
 use App\KYC\Exceptions\FaceVerificationFailedException;
 use App\KYC\Exceptions\FacePhotoNotFoundException;
 use App\Commerce\Services\TransferFundsService;
@@ -11,7 +10,6 @@ use App\KYC\Services\FaceVerificationPipeline;
 use Illuminate\Support\Facades\{Log, Storage};
 use Symfony\Component\HttpFoundation\Response;
 use App\Commerce\Models\{Order, Vendor};
-use App\Commerce\Jobs\NotifyCallbackJob;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -36,11 +34,8 @@ class FacePaymentController extends Controller
         $currency = $order->currency;
         $referenceId = $order->reference_id;
         $amount = (float) $order->amount;
-;
-        $user = User::where([
-            'id_type' => $order->meta['id_type'] ?? null,
-            'id_value' => $order->meta['id_value'] ?? null,
-        ])->firstOrFail();
+
+        $user = User::findByIdentificationOrFail($order->meta['id_type'] ?? null, $order->meta['id_value'] ?? null);
 
         $meta = [
             'initiated_by' => 'face_login',
@@ -61,7 +56,6 @@ class FacePaymentController extends Controller
 
             if (! $user->hasSufficientBalance($amount)) {
                 throw new InsufficientFunds('Insufficient balance.');
-//                return $this->respondWith($request, 'Insufficient balance.', Response::HTTP_PAYMENT_REQUIRED);
             }
 
             $transfer = $transferService->transferUnconfirmed($user, $vendor, $amount, $meta);

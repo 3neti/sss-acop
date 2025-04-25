@@ -24,7 +24,7 @@ trait HasKYCUser
         $this->mergeFillable([
             'id_value',
             'id_type',
-            'mobile',
+//            'mobile',
             'country',
             'birthdate',
         ]);

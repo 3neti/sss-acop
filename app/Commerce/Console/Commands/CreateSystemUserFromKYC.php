@@ -29,9 +29,13 @@ class CreateSystemUserFromKYC extends Command
                 return self::FAILURE;
             }
 
-            $user = User::where('id_type', config('sss-acop.system.user.id_type'))
-                ->where('id_value', config('sss-acop.system.user.id_value'))
-                ->firstOrFail();
+            // Attempt to resolve user via identification table
+//            $user = User::whereHas('identifications', fn ($query) => $query
+//                ->where('id_type', $parsed->idType())
+//                ->where('id_value', $parsed->idValue())
+//            )->firstOrFail();
+
+            $user = User::findByIdentification($parsed->idType(), $parsed->idValue());
 
             $this->info("User [{$user->name}] found with ID type/number: {$parsed->idType()}: {$parsed->idValue()}");
 

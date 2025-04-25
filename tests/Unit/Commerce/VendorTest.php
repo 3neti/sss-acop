@@ -1,7 +1,7 @@
 <?php
 
-use App\KYC\Services\FaceVerificationPipeline;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\KYC\Models\Identification;
 use App\Commerce\Models\Vendor;
 use App\Models\User;
 
@@ -67,7 +67,7 @@ it('can generate a personal access token for vendor', function () {
 
 dataset('user', function () {
     return [
-        [fn() => tap(User::factory()->create(['id_value' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
+        [fn() => tap(User::factory()->has(Identification::factory()->state(['id_type' => 'philsys', 'id_value' => '6302-5389-1879-5682']))->create())->depositFloat(300.0)]
     ];
 });
 

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\{Config, Http, Storage};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\KYC\Services\FaceVerificationPipeline;
 use function Pest\Laravel\actingAs;
+use App\KYC\Models\Identification;
 use App\Models\User;
 use Spatie\Url\Url;
 
@@ -18,7 +19,7 @@ beforeEach(function () {
 
 dataset('user', function () {
     return [
-        [fn() => tap(User::factory()->create(['id_value' => '6302-5389-1879-5682', 'id_type' => 'philsys']))->depositFloat(300.0)]
+        [fn() => tap(User::factory()->has(Identification::factory()->state(['id_type' => 'philsys', 'id_value' => '6302-5389-1879-5682']))->create())->depositFloat(300.0)]
     ];
 });
 

@@ -41,7 +41,8 @@ class HandleInertiaRequests extends Middleware
 
                     return array_merge($user->toArray(), [
                         'balanceFloat' => (float) $user->balanceFloat,
-                        'balanceUpdatedAt' => $user->updated_at
+                        'balanceUpdatedAt' => $user->updated_at,
+                        'mobile' => $user->mobile,
                     ]);
                 },
             ],

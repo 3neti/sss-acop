@@ -71,4 +71,14 @@ enum KYCIdType: string
     {
         return HypervergeDocument::DL;
     }
+
+    public function validationRules(): array
+    {
+        return match($this) {
+            self::EMAIL => ['required', 'email'],
+            self::MOBILE => ['required', 'regex:/^09\d{9}$/'],
+            self::PIN => ['required', 'digits:4'],
+            default => ['required'],
+        };
+    }
 }
